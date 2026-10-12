@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Pineapple Store</title>
+<meta name="description" content="Pineapple Store admin control center." />
+<meta name="theme-color" content="#f5c400" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<link rel="stylesheet" href="./assets/site.css" />
+<link rel="stylesheet" href="./assets/premium.css" />
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="index.html"><img src="./assets/logo.png" alt="PineappleFX logo" />Pineapple<b>FX</b></a>
+  <div class="links">
+    <a class="nl" href="index.html">Home</a>
+    <a class="nl" href="store.html">Store</a>
+    <a class="nl" href="dashboard.html">My Licenses</a>
+    <a class="nl" href="install.html">Install</a>
+    <a class="nl" href="faq.html">FAQ</a>
+    <a class="nl on" href="admin.html" id="navAdmin" style="display:none;">Admin</a>
+    <button class="tbtn" id="themeBtn" title="Toggle dark / light">☾</button>
+    <div class="acct-wrap">
+      <button class="tbtn acct-btn" id="acctBtn" title="Account">👤 Account</button>
+      <div class="acct-menu" id="acctMenu">
+        <a href="dashboard.html">My Licenses</a>
+        <a href="admin.html" id="menuAdmin" style="display:none;">Admin Panel</a>
+        <a href="#" id="menuLogout">Log out</a>
+      </div>
+    </div>
+    <a class="nl buy-sm" id="navBuy" href="store.html">Buy — $20 USD</a>
+  </div>
+</div></nav>
+
+<header class="page-hero"><div class="wrap">
+  <span class="kicker">Restricted</span>
+  <h1>Admin Panel</h1>
+  <p>Store overview, accounts, licenses, coupons, and pricing control.</p>
+</div></header>
+
+<section id="admin" style="display:none;"><div class="wrap" style="max-width:720px">
+  <div class="lic-form" id="srvCard">
+    <b>Server connection <span id="srvBadge" class="tag" style="font-size:11px;font-weight:800;border:1px solid var(--hairline);border-radius:999px;padding:2px 10px;color:var(--label-2);">○ local mode</span></b>
+    <p style="font-size:13px;color:var(--label-2);" id="srvHint">Local mode: this browser's data only. Connect to the backend for live multi-device data, revocation, and pricing control.</p>
+    <div class="admin-form" id="srvForm">
+      <label for="srvPass">Server admin password<input id="srvPass" type="password" autocomplete="current-password" placeholder="set via tools/seed_admin.py" /></label>
+      <button class="btn btn-pay" id="srvConnect" type="button" style="width:100%;">Connect to server</button>
+      <p class="auth-err" id="srvErr" style="min-height:18px;"></p>
+    </div>
+    <button class="mini-btn" id="srvDisconnect" type="button" style="display:none;">Disconnect</button>
+  </div>
+  <div class="lic-form" id="priceCard" style="margin-top:12px;display:none;">
+    <b>Dynamic pricing control <span style="font-size:11px;color:var(--label-3);font-weight:400;">(server, overrides site defaults)</span></b>
+    <div class="admin-form">
+      <label for="prReg">Regular price (USD)<input id="prReg" type="text" inputmode="decimal" placeholder="30.00" /></label>
+      <label for="prLaunch">Launch price (USD)<input id="prLaunch" type="text" inputmode="decimal" placeholder="20.00" /></label>
+      <label for="prEnd">Launch ends (date)<input id="prEnd" type="date" /></label>
+      <button class="btn btn-pay" id="prSave" type="button" style="width:100%;">Save pricing</button>
+      <p class="auth-err" id="prErr" style="min-height:18px;"></p>
+    </div>
+  </div>
+  <div class="lic-form" style="margin-top:12px;">
+    <b>Overview</b>
+    <div style="height:10px;"></div>
+    <div class="stat-grid" id="adminStats"></div>
+    <div id="auditBox" style="margin-top:10px;"></div>
+  </div>
+  <div class="lic-form" style="margin-top:12px;">
+    <b>Coupon generator</b>
+    <p style="font-size:13px;color:var(--label-2);">Create a code, pick free or % off, optionally cap redemptions. In <b>live server</b> mode codes land straight in the database (no env mirroring needed); in local mode they work on this device only.</p>
+    <div class="admin-form">
+      <label for="cpCode">Code
+        <span style="display:flex;gap:8px;margin-top:5px;">
+          <input id="cpCode" class="mono" autocomplete="off" spellcheck="false" placeholder="PFX-XXXX-XXXX" style="margin-top:0;" />
+          <button class="mini-btn" id="cpRandom" type="button" style="padding:10px 16px;">🎲</button>
+        </span>
+      </label>
+      <label for="cpType">Type
+        <select id="cpType">
+          <option value="percent">Percent off</option>
+          <option value="free">Free (no payment)</option>
+        </select>
+      </label>
+      <label for="cpPct">Discount % (percent-off only)<input id="cpPct" type="number" min="1" max="99" value="25" /></label>
+      <label for="cpMax">Max redemptions (blank = unlimited)<input id="cpMax" type="number" min="1" placeholder="unlimited" /></label>
+      <label for="cpNote">Note (for your reference)<input id="cpNote" type="text" maxlength="60" placeholder="e.g. YouTube collab" /></label>
+      <button class="btn btn-pay" id="cpCreate" type="button" style="width:100%;">Create coupon</button>
+      <p class="auth-err" id="cpErr" style="min-height:18px;"></p>
+    </div>
+    <div id="couponList"></div>
+  </div>
+  <div class="lic-form" style="margin-top:12px;">
+    <b>Users &amp; licenses</b>
+    <div style="height:10px;"></div>
+    <div id="adminUsers"></div>
+    <button class="mini-btn" id="adminExport" type="button" style="margin-top:6px;">⬇ Export backup (JSON)</button>
+  </div>
+</div></section>
+
+<section id="adminLocked"><div class="wrap" style="max-width:640px">
+  <div class="lic-form" style="text-align:center;">
+    <div style="font-size:28px;">🔒</div>
+    <b>Restricted area</b>
+    <p style="font-size:13.5px;color:var(--label-2);">This control center is visible only to the Pineapple Store admin. Log in with the admin account to continue.</p>
+    <div style="max-width:340px;margin:16px auto 0;text-align:left;" class="admin-form">
+      <label for="adminLockedPass">Admin password<input id="adminLockedPass" type="password" autocomplete="current-password" placeholder="PineappleAdmin2026!" /></label>
+      <button class="btn btn-pay" id="adminLockedSubmit" type="button" style="width:100%;">Connect &amp; Authenticate</button>
+      <p class="auth-err" id="adminLockedErr" style="min-height:18px;text-align:center;"></p>
+    </div>
+    <div style="margin-top:6px;">
+      <button class="btn btn-ghost" id="adminLoginBtn" type="button" style="padding:6px 16px;font-size:12.5px;">Or open full login dialog</button>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="foot-grid">
+    <div class="foot-brand"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b><p>The motion toolkit for After Effects, by Pineapple Store.</p></div>
+    <div class="foot-col"><b>Shop</b><a href="store.html">Pricing</a><a href="dashboard.html">My Licenses</a><a href="install.html">Install</a></div>
+    <div class="foot-col"><b>Support</b><a href="faq.html">FAQ</a><a href="mailto:pineapplefx.store@gmail.com">Contact</a></div>
+  </div>
+  <div class="foot-base">PineappleFX 2.0.0 · <span id="footPrice">$20 launch special (reg. $30)</span></div>
+</div></footer>
+
+<div id="confirmModal" class="lic-modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+  <div class="lic-modal-card" style="max-width:440px;text-align:left;">
+    <h3 id="confirmTitle" style="margin:0 0 8px;font-size:18px;">Confirm Action</h3>
+    <p id="confirmMessage" style="font-size:13.5px;color:var(--label-2);line-height:1.5;margin-bottom:14px;"></p>
+    <div id="confirmInputWrap" style="display:none;margin-bottom:14px;">
+      <label id="confirmInputLabel" style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;">Type <b>DELETE</b> to confirm:</label>
+      <input id="confirmInput" type="text" autocomplete="off" class="mono" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--hairline);border-radius:8px;background:var(--card-bg, #1a1a1e);color:inherit;" placeholder="DELETE" />
+      <p id="confirmInputErr" class="auth-err" style="min-height:16px;margin-top:4px;font-size:12px;"></p>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+      <button id="confirmCancelBtn" type="button" class="btn btn-ghost" style="padding:8px 18px;">Cancel</button>
+      <button id="confirmProceedBtn" type="button" class="danger-btn" style="padding:8px 18px;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="authModal" class="lic-modal-overlay" role="dialog" aria-modal="true" aria-label="Pineapple Store account">
+  <div class="lic-modal-card" style="text-align:left;">
+    <div style="text-align:center;font-size:30px;">🍍</div>
+    <h3 style="text-align:center;">Pineapple Store account</h3>
+    <p class="lic-sub" style="text-align:center;">Log in to buy, generate keys, and recover them anytime.</p>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="on" type="button">Log in</button>
+      <button id="tabSignup" type="button">Sign up</button>
+    </div>
+    <div class="auth-form">
+      <label for="authEmail">Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@mail.com" /></label>
+      <label for="authPass">Password<input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+      <p class="auth-err" id="authErr"></p>
+      <button class="btn btn-pay" id="authGo" type="button" style="width:100%;">Log in</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;"><button id="authClose" class="btn btn-ghost" type="button" style="padding:9px 24px;">Cancel</button></div>
+  </div>
+</div>
+
+<script src="./assets/pfx-core.js"></script>
+<script src="./assets/pfx-admin.js"></script>
+<script>
+(function(){
+  function paintLock(){
+    var admin = false;
+    try { admin = window.PFXCore && window.PFXCore.isAdmin(); } catch(e){}
+    var l = document.getElementById("adminLocked");
+    if(l) l.style.display = admin ? "none" : "";
+    var a = document.getElementById("admin");
+    if(a) a.style.display = admin ? "" : "none";
+    var nav = document.getElementById("navAdmin");
+    if(nav) nav.style.display = admin ? "" : "none";
+    var menu = document.getElementById("menuAdmin");
+    if(menu) menu.style.display = admin ? "" : "none";
+  }
+  if(window.PFXAuth) window.PFXAuth.onChange(function(){ paintLock(); if(window.PFXAdmin) window.PFXAdmin.refresh(); });
+  paintLock();
+  if(window.PFXAdmin) window.PFXAdmin.refresh();
+  document.getElementById("adminLoginBtn").onclick = function(){ if(window.PFXOpenAuth) window.PFXOpenAuth("login"); };
+})();
+</script>
+</body>
+</html>

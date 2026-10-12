@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Store — PineappleFX by Pineapple Store</title>
+<meta name="description" content="Buy PineappleFX: $20 launch special (regular $30). Instant license keys, coupons, one license per machine." />
+<meta name="theme-color" content="#f5c400" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<link rel="stylesheet" href="./assets/site.css" />
+<link rel="stylesheet" href="./assets/premium.css" />
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="index.html"><img src="./assets/logo.png" alt="PineappleFX logo" />Pineapple<b>FX</b></a>
+  <div class="links">
+    <a class="nl" href="index.html">Home</a>
+    <a class="nl on" href="store.html">Store</a>
+    <a class="nl" href="dashboard.html">My Licenses</a>
+    <a class="nl" href="install.html">Install</a>
+    <a class="nl" href="faq.html">FAQ</a>
+    <a class="nl" href="admin.html" id="navAdmin" style="display:none;">Admin</a>
+    <button class="tbtn" id="themeBtn" title="Toggle dark / light">☾</button>
+    <div class="acct-wrap">
+      <button class="tbtn acct-btn" id="acctBtn" title="Account">👤 Account</button>
+      <div class="acct-menu" id="acctMenu">
+        <a href="dashboard.html">My Licenses</a>
+        <a href="admin.html" id="menuAdmin" style="display:none;">Admin Panel</a>
+        <a href="#" id="menuLogout">Log out</a>
+      </div>
+    </div>
+    <a class="nl buy-sm" id="navBuy" href="store.html#pricing">Buy — $20 USD</a>
+  </div>
+</div></nav>
+
+<header class="page-hero"><div class="wrap">
+  <span class="kicker">Pineapple Store</span>
+  <h1>Get PineappleFX</h1>
+  <p>One payment, yours forever. Pay below and your license key generates on this page the second checkout completes.</p>
+</div></header>
+
+<section id="pricing"><div class="wrap" style="text-align:center">
+  <h2>One price, yours forever</h2>
+  <p class="sec-sub" id="priceSub">$20 USD (Launch Special — 33% Off, normal price $30). Free updates in the 2.x line. One license per machine.</p>
+  <div class="price-row">
+    <span class="price" id="priceVal">$20 <small>USD</small><span class="price-strike">$30</span><span class="price-badge">Launch Special — 33% Off</span></span>
+    <div id="ppPrice" style="min-width:230px;max-width:320px;"></div>
+  </div>
+  <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    <input id="couponInput" placeholder="Coupon code (optional)" spellcheck="false" autocomplete="off" style="background:var(--surface);border:1px solid var(--hairline);border-radius:999px;color:var(--label);padding:11px 18px;font-size:14px;min-width:220px;outline:none;" />
+    <button id="couponApply" class="btn btn-ghost" style="padding:11px 24px;">Apply</button>
+  </div>
+  <p id="couponMsg" class="sec-sub" style="margin:8px 0 0;min-height:20px;"></p>
+  <div class="steps" style="margin-top:34px;text-align:left">
+    <div class="step"><b>1. Log in &amp; pay</b><p>Create your free Pineapple Store account, then check out with the PayPal button above — it opens right here, no redirects, no transaction IDs to hunt down.</p></div>
+    <div class="step"><b>2. Get your key instantly</b><p>The second payment completes, your personal <code>PFX2-...</code> key appears on this page with a one-click copy button. A backup copy + installer also go to your email.</p></div>
+    <div class="step"><b>3. Install &amp; activate</b><p>Install the .zxp, paste your key into the PineappleFX After Effects panel. It unlocks on your machine instantly, offline.</p></div>
+  </div>
+</div></section>
+
+<section id="order"><div class="wrap" style="max-width:640px">
+  <h2>License Generator &amp; Key Management</h2>
+  <p class="sec-sub" id="orderSub">Log in, pay with PayPal above — your <code>PFX2-…</code> key is generated on this page the second payment completes and saved to your account. No transaction IDs, no email wait.</p>
+  <div class="lic-gate" id="orderGate" style="display:none;">🔒 <b>Log in</b> to generate or recover licenses — <a href="#" id="orderLogin" style="color:var(--accent);font-weight:700;">log in / sign up</a></div>
+  <input type="hidden" id="couponField" value="" />
+  <div class="lic-form" id="licStatus" role="status" aria-live="polite">
+    <div style="text-align:center;padding:6px 2px;">
+      <div style="font-size:26px;">⚡</div>
+      <b>Waiting for payment…</b>
+      <p style="font-size:13px;color:var(--label-2);margin-top:4px;">Click a PayPal button above. When payment succeeds, your key appears here <i>and</i> in a popup — with a one-click copy button and installer download.</p>
+    </div>
+    <div class="lic-steps-mini"><b>1.</b> Pay with PayPal (in-page popup, ~30 sec)<br><b>2.</b> Paste your 8-character Machine ID when asked<br><b>3.</b> Copy your key → paste it into the PineappleFX After Effects panel to unlock instantly.</div>
+  </div>
+  <div class="lic-form" id="couponClaim" style="margin-top:12px;">
+    <b>Have an owner / promo coupon?</b>
+    <p style="font-size:13px;color:var(--label-2);">Apply it in Pricing above, then enter your Machine ID to activate your key — no payment needed.</p>
+    <label for="claimDev" style="font-size:13px;font-weight:700;">Enter Machine ID to activate key
+      <input id="claimDev" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder="ABCDEFGH" maxlength="8" style="display:block;width:100%;margin-top:5px;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:10px;font-size:14px;font-family:monospace;text-transform:uppercase;letter-spacing:1px;outline:none;" />
+      <span class="lic-hint" id="claimHint">The 8-character ID shown on the locked panel (click it there to copy).</span>
+    </label>
+    <button id="claimBtn" class="btn btn-pay lic-btn" type="button" style="width:100%;">Generate Key</button>
+    <div id="claimStatus" class="lic-status" role="status" aria-live="polite"></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="foot-grid">
+    <div class="foot-brand"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b><p>The motion toolkit for After Effects, by Pineapple Store.</p></div>
+    <div class="foot-col"><b>Shop</b><a href="store.html">Pricing</a><a href="dashboard.html">My Licenses</a><a href="install.html">Install</a></div>
+    <div class="foot-col"><b>Support</b><a href="faq.html">FAQ</a><a href="mailto:pineapplefx.store@gmail.com">Contact</a></div>
+  </div>
+  <div class="foot-base">PineappleFX 2.0.0 · <span id="footPrice">$20 launch special (reg. $30)</span></div>
+</div></footer>
+
+<div id="authModal" class="lic-modal-overlay" role="dialog" aria-modal="true" aria-label="Pineapple Store account">
+  <div class="lic-modal-card" style="text-align:left;">
+    <div style="text-align:center;font-size:30px;">🍍</div>
+    <h3 style="text-align:center;">Pineapple Store account</h3>
+    <p class="lic-sub" style="text-align:center;">Log in to buy, generate keys, and recover them anytime.</p>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="on" type="button">Log in</button>
+      <button id="tabSignup" type="button">Sign up</button>
+    </div>
+    <div class="auth-form">
+      <label for="authEmail">Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@mail.com" /></label>
+      <label for="authPass">Password<input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+      <p class="auth-err" id="authErr"></p>
+      <button class="btn btn-pay" id="authGo" type="button" style="width:100%;">Log in</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;"><button id="authClose" class="btn btn-ghost" type="button" style="padding:9px 24px;">Cancel</button></div>
+  </div>
+</div>
+
+<div id="licModal" class="lic-modal-overlay" role="dialog" aria-modal="true" aria-label="Your PineappleFX license">
+  <div class="lic-modal-card">
+    <div id="licModalBody"></div>
+    <button id="licModalClose" class="btn btn-ghost" type="button" style="padding:10px 24px;">Close</button>
+  </div>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=AXCgvj5kVvZzspdZO1OfDLnFHrdXUxxh0WoLgQEsVqPJ-Z8opOeZ5d1UGQsR5M0WImwwgpKAO0uRb_Rf&currency=USD"></script>
+<script src="./assets/pfx-core.js"></script>
+<script src="./assets/pfx-licensing.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+﻿<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PineappleFX — Motion toolkit for After Effects</title>
+<meta name="description" content="PineappleFX by Pineapple Store. Easing, text, transitions, glass, styles, expressions, numbers, devices and tools for After Effects. $30 one-time, $20 launch special." />
+<meta name="theme-color" content="#f5c400" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<link rel="stylesheet" href="./assets/site.css" />
+<link rel="stylesheet" href="./assets/premium.css" />
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="index.html"><img src="./assets/logo.png" alt="PineappleFX logo" />Pineapple<b>FX</b></a>
+  <div class="links">
+    <a class="nl on" href="index.html">Home</a>
+    <a class="nl" href="store.html">Store</a>
+    <a class="nl" href="dashboard.html">My Licenses</a>
+    <a class="nl" href="install.html">Install</a>
+    <a class="nl" href="faq.html">FAQ</a>
+    <a class="nl" href="admin.html" id="navAdmin" style="display:none;">Admin</a>
+    <button class="tbtn" id="themeBtn" title="Toggle dark / light">☾</button>
+    <div class="acct-wrap">
+      <button class="tbtn acct-btn" id="acctBtn" title="Account">👤 Account</button>
+      <div class="acct-menu" id="acctMenu">
+        <a href="dashboard.html">My Licenses</a>
+        <a href="admin.html" id="menuAdmin" style="display:none;">Admin Panel</a>
+        <a href="#" id="menuLogout">Log out</a>
+      </div>
+    </div>
+    <a class="nl buy-sm" id="navBuy" href="store.html">Buy — $20 USD</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <img class="logo" src="./assets/logo.png" alt="PineappleFX logo" />
+  <h1>Pineapple<span>FX</span></h1>
+  <p class="sub">The motion toolkit for After Effects. Easing, text animators, transitions, liquid glass, styles, expressions, counters, device frames and more — in one fast panel. By Pineapple Store.</p>
+  <div class="price-row">
+    <span class="price" id="heroPrice">$20 <small>USD</small><span class="price-strike">$30</span><span class="price-badge">Launch Special — 33% Off</span></span>
+    <a class="btn btn-pay" href="store.html">Get PineappleFX</a>
+    <a class="btn btn-ghost" href="#preview">See it in action</a>
+  </div>
+  <p class="trial-note">One license = one machine. Keys generate instantly after checkout — plus a backup by email.</p>
+  <div class="stat-row">
+    <div><b>9</b><span>toolkit tabs</span></div>
+    <div><b>100+</b><span>presets &amp; rigs</span></div>
+    <div><b>Offline</b><span>license keys</span></div>
+    <div><b>2.x</b><span>free updates</span></div>
+  </div>
+</div></header>
+
+<section id="features"><div class="wrap">
+  <h2>Everything in one panel</h2>
+  <p class="sec-sub">Nine tabs, hundreds of presets, one Apply button.</p>
+  <div class="grid">
+    <div class="card"><h3><span>Easing</span></h3><p>Apple-standard curves, springs and custom bezier editor with live preview.</p></div>
+    <div class="card"><h3><span>Text</span></h3><p>Range-selector text animators: slides, bounces, typewriter, staggers and more.</p></div>
+    <div class="card"><h3><span>Transitions</span></h3><p>Fade, rise, drop, scale, spin, blur and whip transitions with in/out support.</p></div>
+    <div class="card"><h3><span>Glass</span></h3><p>Liquid-glass rigs with blur, refraction, lighting and shadows.</p></div>
+    <div class="card"><h3><span>Styles</span></h3><p>One-click grade, glow, grain and color treatments.</p></div>
+    <div class="card"><h3><span>Expressions</span></h3><p>Wiggle, bounce, loop, orbit, sway, flicker and 20+ ready expressions.</p></div>
+    <div class="card"><h3><span>Numbers</span></h3><p>Animated counters, timers and stat callouts.</p></div>
+    <div class="card"><h3><span>Devices</span></h3><p>iPhone and iPad frames with screens, glare and Dynamic Island.</p></div>
+    <div class="card"><h3><span>Tools</span></h3><p>Sequence layers, text boxes, color fields and batch helpers.</p></div>
+  </div>
+</div></section>
+
+<section id="preview"><div class="wrap">
+  <h2>The actual interface</h2>
+  <p class="sec-sub">This is what the PineappleFX panel looks like inside After Effects — try the tabs below, it's live.</p>
+  <div class="mock">
+    <div class="mock-bar">
+      <img src="./assets/logo.png" alt="" /><span class="mock-title">Pineapple<span>FX</span></span><span class="mock-pro">PRO</span>
+      <div class="mock-pills" id="mPills"><i class="on">Easing</i><i>Text</i><i>Transitions</i><i>Glass</i><i>Styles</i><i>Expressions</i><i>Numbers</i><i>Devices</i><i>Tools</i></div>
+      <span class="mock-dots">● ● ●</span>
+    </div>
+    <div class="mock-body">
+      <div class="mock-list" id="mList"><i class="on">Apple Standard</i><i>Emphasized</i><i>Decelerated</i><i>Spring · Soft</i><i>Spring · Bouncy</i><i>Snap</i><i>Anticipate</i><i>Bouncy</i></div>
+      <div class="mock-main">
+        <div class="mock-curve" id="mCurve">
+          <svg viewBox="0 0 360 150" width="100%" height="120" preserveAspectRatio="xMidYMid meet">
+            <g stroke="#3a3a3f" stroke-width="1"><line x1="20" y1="20" x2="20" y2="130"/><line x1="20" y1="130" x2="340" y2="130"/></g>
+            <line x1="20" y1="130" x2="110" y2="130" stroke="#717171" stroke-dasharray="3 3"/>
+            <line x1="340" y1="30" x2="250" y2="30" stroke="#717171" stroke-dasharray="3 3"/>
+            <path d="M 20 130 C 110 130 140 30 340 30" fill="none" stroke="#feca08" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="110" cy="130" r="5" fill="#feca08"/><circle cx="250" cy="30" r="5" fill="#feca08"/>
+            <circle cx="20" cy="130" r="4" fill="#f2f2f0"/><circle cx="340" cy="30" r="4" fill="#f2f2f0"/>
+          </svg>
+        </div>
+        <div style="margin:12px 2px 0;font-size:12.5px;"><b id="mName" style="color:#f2f2f0;"></b> <span id="mFormula" style="color:#a9a9a4;font-family:monospace;font-size:11px;"></span></div>
+        <div class="mock-params">
+          <div class="prow"><b>Direction</b><span class="seg" id="mSeg"><i class="on">In</i><i>Out</i></span></div>
+          <div class="prow"><b>Duration</b><span class="mslider" id="mDurS" style="--f:55%"></span><span id="mDurV">1.50 s</span></div>
+          <div class="prow"><b>Color</b><span class="swatch" id="mSw"></span><span id="mHex">#FECA08</span></div>
+          <div class="prow"><b>Blur</b><span class="mslider" id="mBlurS" style="--f:35%"></span><span id="mBlurV">21 px</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="mock-foot"><span>PineappleFX 2.0.0 · After Effects</span><span class="apply" id="mApply">Apply</span></div>
+  </div>
+</div></section>
+
+<section><div class="wrap" style="max-width:720px">
+  <div class="cta-band">
+    <h2>Ready to move faster?</h2>
+    <p>One payment, yours forever. Your key generates instantly after checkout.</p>
+    <a class="btn btn-pay" href="store.html">Get PineappleFX</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="foot-grid">
+    <div class="foot-brand"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b><p>The motion toolkit for After Effects, by Pineapple Store.</p></div>
+    <div class="foot-col"><b>Shop</b><a href="store.html">Pricing</a><a href="dashboard.html">My Licenses</a><a href="install.html">Install</a></div>
+    <div class="foot-col"><b>Support</b><a href="faq.html">FAQ</a><a href="mailto:pineapplefx.store@gmail.com">Contact</a></div>
+  </div>
+  <div class="foot-base">PineappleFX 2.0.0 · <span id="footPrice">$20 launch special (reg. $30)</span></div>
+</div></footer>
+
+<div id="authModal" class="lic-modal-overlay" role="dialog" aria-modal="true" aria-label="Pineapple Store account">
+  <div class="lic-modal-card" style="text-align:left;">
+    <div style="text-align:center;font-size:30px;">🍍</div>
+    <h3 style="text-align:center;">Pineapple Store account</h3>
+    <p class="lic-sub" style="text-align:center;">Log in to buy, generate keys, and recover them anytime.</p>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="on" type="button">Log in</button>
+      <button id="tabSignup" type="button">Sign up</button>
+    </div>
+    <div class="auth-form">
+      <label for="authEmail">Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@mail.com" /></label>
+      <label for="authPass">Password<input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+      <p class="auth-err" id="authErr"></p>
+      <button class="btn btn-pay" id="authGo" type="button" style="width:100%;">Log in</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;"><button id="authClose" class="btn btn-ghost" type="button" style="padding:9px 24px;">Cancel</button></div>
+  </div>
+</div>
+
+<script src="./assets/pfx-core.js"></script>
+<script src="./assets/pfx-preview.js"></script>
+</body>
+</html>

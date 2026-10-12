@@ -1,0 +1,16 @@
+# Database and runtime state
+data/
+site/data/
+*.db
+pfx-db.json
+
+# Build and cache
+build/exe-work/
+**/__pycache__/
+*.pyc
+node_modules/
+.vercel/
+
+# Environment files
+.env
+.env.*

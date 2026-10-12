@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order confirmed — PineappleFX</title>
+<meta name="theme-color" content="#f5c400" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<style>
+:root{
+  --surface:#fffbf0; --grouped:#f4eada; --elevated:#ffffff;
+  --label:#2e2210; --label-2:#7a6446; --label-3:#ac9c82;
+  --accent:#b07e00; --accent-hi:#ca9610; --accent-ink:#241a04;
+  --hairline:#e4d4bc; --glow:rgba(176,126,0,.16); --good:#1f9d4d;
+  color-scheme:light;
+}
+html[data-theme="dark"]{
+  --surface:#17171a; --grouped:#1e1e22; --elevated:#26262b;
+  --label:#f4f4f1; --label-2:#b2b2ae; --label-3:#717171;
+  --accent:#feca08; --accent-hi:#ffd850; --accent-ink:#241a04;
+  --hairline:#3c3c41; --glow:rgba(254,202,8,.12); --good:#30d158;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--surface);color:var(--label);font-family:-apple-system,"Segoe UI",Roboto,Inter,sans-serif;line-height:1.55}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;gap:10px;height:60px;border-bottom:1px solid var(--hairline)}
+nav img{width:28px;height:28px}
+nav b{font-size:16px} nav b span{color:var(--accent)}
+nav .sp{flex:1}
+.tbtn{cursor:pointer;border:1px solid var(--hairline);background:var(--grouped);color:var(--label);border-radius:999px;width:34px;height:34px;font-size:15px}
+main{padding:44px 0 70px;text-align:center}
+.check{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;background:linear-gradient(180deg,var(--accent-hi),var(--accent));box-shadow:0 14px 34px -8px var(--glow)}
+h1{font-size:30px;letter-spacing:-.8px}
+.sub{color:var(--label-2);font-size:14.5px;margin:6px 0 24px}
+.card{background:var(--elevated);border:1px solid var(--hairline);border-radius:16px;padding:20px;text-align:left;margin-bottom:14px}
+.card h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--label-3);margin-bottom:10px}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:6px 0;border-top:1px solid var(--hairline)}
+.kv:first-of-type{border-top:none}
+.kv span:first-child{color:var(--label-2)}
+.kv span:last-child{font-weight:600;text-align:right;overflow-wrap:anywhere}
+.keybox{font-family:monospace;font-size:19px;font-weight:800;letter-spacing:1px;color:var(--accent);background:var(--grouped);border:1px dashed var(--accent);border-radius:12px;padding:16px 12px;margin:4px 0 12px;overflow-wrap:anywhere}
+.btn{display:inline-block;text-decoration:none;border:none;cursor:pointer;font-weight:800;font-size:14.5px;padding:12px 28px;border-radius:999px;background:linear-gradient(180deg,var(--accent-hi),var(--accent));color:var(--accent-ink)}
+.btn-ghost{background:var(--elevated);color:var(--label);border:1px solid var(--hairline)}
+ol.steps{list-style:none;text-align:left;display:grid;gap:10px;margin-top:4px}
+ol.steps li{background:var(--elevated);border:1px solid var(--hairline);border-radius:12px;padding:13px 15px;font-size:13.5px}
+ol.steps b{color:var(--accent)}
+.mini-form{display:grid;gap:10px;margin-top:6px}
+.mini-form input{background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:10px;font-size:14px;width:100%}
+.mini-form input.mono{font-family:monospace;text-transform:uppercase}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--hairline);border-top-color:var(--accent);margin:14px auto;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+footer{border-top:1px solid var(--hairline);padding:22px 0 40px;text-align:center;color:var(--label-3);font-size:12.5px}
+footer a{color:var(--accent);font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a href="./index.html" style="display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--label);font-weight:800;"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b></a>
+  <span class="sp"></span>
+  <button class="tbtn" id="themeBtn" title="Toggle dark / light"></button>
+</nav>
+<main>
+  <div id="ok" style="display:none;">
+    <div class="check">✓</div>
+    <h1>Payment approved</h1>
+    <p class="sub" id="amountLine"></p>
+    <div class="card"><h3>Order</h3><div id="orderRows"></div></div>
+    <div class="card" id="keyCard" style="display:none;"><h3>Your license key</h3>
+      <div class="keybox" id="keyVal"></div>
+      <button class="btn" id="copyKey" style="width:100%;">Copy key</button>
+      <p class="sub" style="margin:12px 0 0;">Paste it into the locked panel — it unlocks on your machine instantly, offline. Your installer arrives by email.</p>
+    </div>
+    <div class="card" id="waitCard"><h3>What happens next</h3>
+      <div id="waitBody"></div>
+    </div>
+    <div class="card"><h3>Install &amp; activate</h3>
+      <ol class="steps">
+        <li><b>1.</b> Run once as admin: <code>reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f</code></li>
+        <li><b>2.</b> Install the personal <code>.zxp</code> from your purchase email with an extension manager.</li>
+        <li><b>3.</b> Restart After Effects → Window → Extensions → PineappleFX, paste your key. Done.</li>
+      </ol>
+    </div>
+  </div>
+  <div id="nok" style="display:none;">
+    <div class="check" style="filter:grayscale(1);opacity:.6;">?</div>
+    <h1>No order found</h1>
+    <p class="sub">This page needs a completed checkout. Head back and buy first.</p>
+    <a class="btn" href="./store.html#pricing">Back to pricing</a>
+  </div>
+</main>
+<footer>Questions? <a href="mailto:pineapplefx.store@gmail.com">pineapplefx.store@gmail.com</a> — include your order ID.</footer>
+</div>
+<script>
+(function(){
+  // Theme (shared with index).
+  var root = document.documentElement, KEY = "pineapplefx-site-theme";
+  function current(){
+    try { var s = localStorage.getItem(KEY); if(s === "light" || s === "dark") return s; } catch(e){}
+    return (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+  }
+  function paint(){
+    var t = current();
+    root.setAttribute("data-theme", t);
+    document.getElementById("themeBtn").textContent = (t === "dark") ? "☀" : "☾";
+  }
+  document.getElementById("themeBtn").onclick = function(){
+    var next = (root.getAttribute("data-theme") === "dark") ? "light" : "dark";
+    try { localStorage.setItem(KEY, next); } catch(e){}
+    paint();
+  };
+  paint();
+
+  // ============================================================
+  // Instant keys need the optional backend (see server/worker.js).
+  // Leave "" and buyers get keys by email (current flow).
+  // After deploying the worker, paste its https URL here and this
+  // page will fetch + display the fresh key automatically.
+  // ============================================================
+  var WORKER_URL = "";
+
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function row(k, v){ return '<div class="kv"><span>' + k + '</span><span>' + esc(v || "—") + '</span></div>'; }
+  function copyText(txt){
+    function done(){ toast("Copied."); }
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done, done); return; }
+      var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch(e){}
+      document.body.removeChild(ta); done();
+    } catch(e){ done(); }
+  }
+  function toast(m){
+    var t = document.getElementById("sToast");
+    if(!t){
+      t = document.createElement("div"); t.id = "sToast";
+      t.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1e1e22;color:#f5f5f4;border:1px solid #feca08;border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;z-index:99;";
+      document.body.appendChild(t);
+    }
+    t.textContent = m; t.style.display = "block";
+    clearTimeout(t.__h); t.__h = setTimeout(function(){ t.style.display = "none"; }, 2600);
+  }
+
+  var q = {};
+  try {
+    new URLSearchParams(location.search || "").forEach(function(v, k){ q[k] = v; });
+  } catch(e){}
+  if(!q.order){
+    document.getElementById("nok").style.display = "block";
+    return;
+  }
+  document.getElementById("ok").style.display = "block";
+  document.getElementById("amountLine").textContent =
+    (q.amount ? "$" + q.amount + " USD one-time. " : "") + "Your key is tied to one machine.";
+  document.getElementById("orderRows").innerHTML =
+    row("Order ID", q.order) + row("Transaction", q.txn || q.order) +
+    row("Email", q.email) + row("Machine ID", q.device);
+
+  var waitBody = document.getElementById("waitBody");
+  function manualCard(){
+    var missing = (!q.email || !q.device);
+    waitBody.innerHTML =
+      "<p style='font-size:13.5px;margin-bottom:10px;'>Your personal key plus your pre-activated installer are being prepared and will land at <b>" +
+      esc(q.email || "your inbox") + "</b> shortly. Keys live in your email forever, so they can't be lost.</p>" +
+      (missing
+        ? "<div class='mini-form'>"
+          + (!q.email ? "<input id='sEmail' type='email' placeholder='Email for delivery' />" : "")
+          + (!q.device ? "<input id='sDev' class='mono' placeholder='Machine ID (on the locked panel)' maxlength='8' />" : "")
+          + "<button class='btn btn-ghost' id='sBack'>Complete my details</button></div>"
+          + "<p style='font-size:12px;color:var(--label-3);margin-top:8px;'>Sends you back to the order form with everything prefilled.</p>"
+        : "<p style='font-size:13.5px;'>Everything needed is on file — nothing left to do but install.</p>");
+    var back = document.getElementById("sBack");
+    if(back) back.onclick = function(){
+      var em = document.getElementById("sEmail"), dv = document.getElementById("sDev");
+      var u = "store.html?txn=" + encodeURIComponent(q.txn || q.order || "");
+      if(em && em.value) u += "&email=" + encodeURIComponent(em.value);
+      else if(q.email) u += "&email=" + encodeURIComponent(q.email);
+      if(dv && dv.value) u += "&device=" + encodeURIComponent(dv.value);
+      else if(q.device) u += "&device=" + encodeURIComponent(q.device);
+      location.href = u + "#order";
+    };
+  }
+  if(WORKER_URL && q.email && q.device){
+    waitBody.innerHTML = "<div class='spin'></div><p style='font-size:13.5px;text-align:center;'>Preparing your license key…</p>";
+    fetch(WORKER_URL, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ orderID:q.order, email:q.email, device:q.device })
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if(res && res.ok && res.key){
+        document.getElementById("keyCard").style.display = "block";
+        document.getElementById("keyVal").textContent = res.key;
+        document.getElementById("copyKey").onclick = function(){ copyText(res.key, "Key copied."); };
+        waitBody.innerHTML = "<p style='font-size:13.5px;'>Key issued just now — a copy was also emailed to <b>" + esc(q.email) + "</b> with your installer.</p>";
+      } else { manualCard(); }
+    }).catch(function(){ manualCard(); });
+    setTimeout(function(){
+      if(document.getElementById("keyCard").style.display !== "block") manualCard();
+    }, 15000);
+  } else {
+    manualCard();
+  }
+  var cp = document.getElementById("copyKey");
+  if(cp) cp.onclick = function(){ copyText(document.getElementById("keyVal").textContent, "Key copied."); };
+})();
+</script>
+</body>
+</html>

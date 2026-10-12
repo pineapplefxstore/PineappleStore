@@ -1,0 +1,85 @@
+# Pineapple Store — verify on every push/PR to main, deploy static site to Pages.
+#
+# Repo layout assumption: this repository is named `PineappleStore` and the
+# static site lives in `site/` (only `site/` is published; `site/api/` ships
+# inertly on Pages — plug an external backend via window.PFX_API_BASE).
+# Backend alternative: deploy the same repo on Vercel with project root `site/`.
+#
+# Optional repo variable for panel enforcement builds:
+#   PFX_VERIFY_URL = https://your-api-host/api/verify-license
+
+name: Verify + Deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run pre-deploy gate (pages, assets, JS, .zxp, manifest)
+        run: python tools/ci_check.py
+
+      - name: Backend handler smoke tests
+        run: |
+          node --input-type=module -e "
+          process.env.DATA_DIR='/tmp/pfx-ci'; process.env.MINT_SECRET='7c795771be81002adee1870b7dfbc589'; process.env.TOKEN_SECRET='ci-secret-0123456789abcdef';
+          const mock=(b,h)=>({method:'POST',body:b,headers:h||{}});
+          const mockRes=()=>({statusCode:200,headers:{},setHeader(){},status(c){this.statusCode=c;return this},json(o){this.payload=o;return this},end(){return this}});
+          const gen=(await import('./site/api/generate-license.js')).default;
+          const ver=(await import('./site/api/verify-license.js')).default;
+          let r=mockRes(); await gen(mock({email:'ci@t.com',machine_id:'AAAAAAAA',txn_id:'TXNCI0001'}),r);
+          if(r.statusCode!==200) throw new Error('mint failed: '+JSON.stringify(r.payload));
+          const key=r.payload.key;
+          r=mockRes(); await ver(mock({machine_id:'AAAAAAAA',license_key:key}),r);
+          if(!r.payload.ok || !r.payload.token) throw new Error('verify failed: '+JSON.stringify(r.payload));
+          console.log('backend smoke OK ('+key+')');
+          "
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
