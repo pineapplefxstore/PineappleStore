@@ -249,8 +249,11 @@ export default async function handler(req, res) {
   // ---- validation: machine_id + (orderID/txn XOR valid coupon) ----
   // Email is required for paid orders (receipt delivery) but optional for
   // free-coupon claims — the key is displayed instantly on screen anyway.
-  const emailOptional = kind === "free";
-  if (!machineId || (!txnId && !couponRaw) || (!email && !emailOptional)) {
+  // Owner buys nothing: admin accounts mint free keys on any machine.
+  const requester = email ? db.get("users", email.toLowerCase()) : null;
+  const isOwnerFree = !!(requester && requester.is_admin);
+  const emailOptional = kind === "free" || isOwnerFree;
+  if (!machineId || (!txnId && !couponRaw && !isOwnerFree) || (!email && !emailOptional)) {
     return json(res, 400, { ok: false, error: "missing-fields" });
   }
   if (email && !EMAIL_RE.test(email)) {
@@ -269,7 +272,7 @@ export default async function handler(req, res) {
   if (couponRaw && !couponUsableDb(couponRaw)) {
     return json(res, 400, { ok: false, error: "coupon-exhausted" });
   }
-  const isFreeClaim = kind === "free";
+  const isFreeClaim = kind === "free" || isOwnerFree;
   if (!isFreeClaim && txnId.length < 5) {
     return json(res, 400, { ok: false, error: "bad-transaction" });
   }
@@ -303,13 +306,13 @@ export default async function handler(req, res) {
     machine: machineId,
     created: new Date().toISOString(),
     revoked: false,
-    source: couponRaw ? "coupon" : "purchase",
+    source: couponRaw ? "coupon" : isOwnerFree ? "admin-free" : "purchase",
     coupon: couponRaw || "",
     orderID: orderId || "",
     amount: amount || "",
   });
   if (couponRaw) couponUseDb(couponRaw);
-  db.audit(email || "?", "license-issued", `${machineId}${couponRaw ? " / " + couponRaw : ""}`);
+  db.audit(email || "?", "license-issued", `${machineId}${couponRaw ? " / " + couponRaw : ""}${isOwnerFree ? " / admin-free" : ""}`);
 
   // ---- deliver (Resend → SendGrid → graceful no-mailer mode) ----
   const downloadUrl =

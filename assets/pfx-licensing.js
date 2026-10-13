@@ -65,7 +65,7 @@ window.PineappleFXLic = (function(){
   function keyCardHTML(key, opts){
     opts = opts || {};
     return '<div style="font-size:34px;">🎉</div>'
-      + '<h3>Payment Successful!</h3>'
+      + '<h3>' + (opts.free ? 'Your free key is ready!' : 'Payment Successful!') + '</h3>'
       + '<p class="lic-sub">Your license key — generated just now' + (opts.email ? ', receipt also sent to <b>' + esc(opts.email) + '</b>' : '') + ':</p>'
       + '<div class="keyline-big" id="licKeyVal">' + esc(key) + '</div>'
       + (opts.recovered ? '<p class="lic-sim">♻ Recovered from your account — this machine already had a key, no duplicate created.</p>' : '')
@@ -83,7 +83,7 @@ window.PineappleFXLic = (function(){
     document.getElementById("licCopyBtn").onclick = function(){ copyKey(key, this); };
     openModal();
     // Mirror into the #order section so the key survives closing the popup.
-    if(licStatus) licStatus.innerHTML = '<div style="text-align:center;"><div style="font-size:24px;">🎉</div><b>Payment Successful — key ready!</b></div>'
+    if(licStatus) licStatus.innerHTML = '<div style="text-align:center;"><div style="font-size:24px;">🎉</div><b>' + (opts.free ? 'Your free key is ready!' : 'Payment Successful — key ready!') + '</b></div>'
       + (opts.recovered ? '<div style="text-align:center;"><p class="lic-sim">♻ Recovered from your account.</p></div>' : '')
       + '<div class="keyline-big" style="font-size:15px;">' + esc(key) + '</div>'
       + '<button class="btn btn-pay" id="licCopyInline" type="button" style="width:100%;">Copy Key</button>'
@@ -202,7 +202,10 @@ window.PineappleFXLic = (function(){
       }
       // Strict 1-machine-per-license: a paid key for a second distinct
       // machine needs the one-time $7.90 extra slot (server enforces too).
-      if(!slotAllows(acct, dev)){
+      // Owners skip this — every owner key is free.
+      var ownerNow = false;
+      try { ownerNow = window.PFXCore && window.PFXCore.isOwner(); } catch(e){}
+      if(!ownerNow && !slotAllows(acct, dev)){
         document.getElementById("licDevErr").innerHTML = "This account's machine slot"
           + (slotHasExtra(acct) ? "s are" : " is")
           + " already filled — each key unlocks exactly 1 PC. "
@@ -261,7 +264,9 @@ window.PineappleFXLic = (function(){
       return;
     }
     var c = coupon();
-    if(!c){
+    var owner = false;
+    try { owner = window.PFXCore && window.PFXCore.isOwner(); } catch(e){}
+    if(!c && !owner){
       claimSetStatus("error", "Apply your coupon code in <b>Pricing</b> above first, then generate your key here.");
       return;
     }
@@ -288,7 +293,7 @@ window.PineappleFXLic = (function(){
         onKey: function(key, data){
           if(window.PFXVault) window.PFXVault.save(acct, dev, { key: key, at: Date.now(), coupon: c });
           if(window.PFXCoupons && c) window.PFXCoupons.use(c);
-          showKey(key, { downloadUrl: data.downloadUrl, simulated: data.simulated });
+          showKey(key, { downloadUrl: data.downloadUrl, simulated: data.simulated, free: owner && !c });
           claimSetStatus("success", "Key generated — see the popup above (or the License Generator panel).");
           refreshDashboard();
         },
@@ -297,6 +302,27 @@ window.PineappleFXLic = (function(){
     );
   };
   }
+  /* --- owner headline: plain words, no coupon needed --- */
+  function paintOwnerClaim(){
+    var box = document.getElementById("couponClaim");
+    if(!box) return;
+    var owner = false;
+    try { owner = window.PFXCore && window.PFXCore.isOwner(); } catch(e){}
+    var head = box.querySelector("b"), sub = box.querySelector("p");
+    if(owner){
+      if(head) head.textContent = "👑 Owner: your keys are free";
+      if(sub) sub.textContent = "Just enter your Machine ID below — no coupon, no payment.";
+      if(claimBtn && !claimBtn.disabled) claimBtn.textContent = "Get my free key";
+    } else {
+      if(head && head.textContent.indexOf("Owner:") !== -1){
+        head.textContent = "Have an owner / promo coupon?";
+        if(sub) sub.textContent = "Apply it in Pricing above, then enter your Machine ID to activate your key — no payment needed.";
+        if(claimBtn && !claimBtn.disabled) claimBtn.textContent = "Generate Key";
+      }
+    }
+  }
+  if(window.PFXAuth) window.PFXAuth.onChange(function(){ paintOwnerClaim(); });
+  paintOwnerClaim();
 /* --- Extra-machine deal ($7.90, one per account) --- */
   var SLOT_AMOUNT = "7.90";
   var slotCache = {}; // acct -> { claimed, machine?, key? } (server status snapshot)

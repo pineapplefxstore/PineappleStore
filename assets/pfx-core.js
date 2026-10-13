@@ -517,6 +517,31 @@
     }
     if(b) b.style.display = show ? "" : "none";
   }
+  /* One-tap email copy for every [data-copy-email] button (footer, help). */
+  function bindContactCopy(){
+    Array.prototype.forEach.call(document.querySelectorAll("[data-copy-email]"), function(b){
+      if(b.__wired) return; b.__wired = true;
+      b.onclick = function(){
+        var mail = b.getAttribute("data-copy-email") || "";
+        var orig = b.getAttribute("data-orig") || b.textContent;
+        if(!b.getAttribute("data-orig")) b.setAttribute("data-orig", orig);
+        function done(ok){
+          b.textContent = ok ? "✓ Copied!" : mail;
+          if(ok) setTimeout(function(){ b.textContent = b.getAttribute("data-orig"); }, 2000);
+        }
+        try {
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(mail).then(function(){ done(true); }, function(){ done(false); });
+            return;
+          }
+          var ta = document.createElement("textarea");
+          ta.value = mail; document.body.appendChild(ta);
+          ta.select(); try { document.execCommand("copy"); done(true); } catch(e){ done(false); }
+          document.body.removeChild(ta);
+        } catch(e){ done(false); }
+      };
+    });
+  }
   var orderLogin = document.getElementById("orderLogin");
   if(orderLogin) orderLogin.onclick = function(e){ if(e && e.preventDefault) e.preventDefault(); openAuth("signup"); };
   window.PFXAuth.onChange(function(){
@@ -526,6 +551,7 @@
   });
   paintSessionChrome();
   paintCoupon();
+  bindContactCopy();
   function verifyServerSession(){
     var tok = "";
     try { tok = localStorage.getItem("pfx-admin-token") || ""; } catch(e){}

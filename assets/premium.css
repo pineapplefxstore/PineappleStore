@@ -54,6 +54,8 @@ footer{padding:40px 0 46px}
 .foot-col b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--label-3);margin-bottom:10px}
 .foot-col a{display:block;color:var(--label-2);text-decoration:none;font-size:13.5px;font-weight:600;padding:4px 0}
 .foot-col a:hover{color:var(--accent)}
+.foot-col button.foot-mail{display:block;background:none;border:none;cursor:pointer;color:var(--label-2);font-size:13.5px;font-weight:600;padding:4px 0;font-family:inherit;text-align:left}
+.foot-col button.foot-mail:hover{color:var(--accent)}
 .foot-base{border-top:1px solid var(--hairline);padding-top:18px;text-align:center}
 
 /* faq + install polish */

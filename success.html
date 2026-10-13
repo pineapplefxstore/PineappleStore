@@ -90,7 +90,7 @@ footer a{color:var(--accent);font-weight:700;text-decoration:none}
     <a class="btn" href="./store#pricing">Back to pricing</a>
   </div>
 </main>
-<footer>Questions? <a href="mailto:pineapplefx.store@gmail.com">pineapplefx.store@gmail.com</a> — include your order ID.</footer>
+<footer>Questions? <a href="mailto:pineapplefx.store@gmail.com?subject=PineappleFX%20order">pineapplefx.store@gmail.com</a> <button id="copyMail" type="button" style="cursor:pointer;border:1px solid var(--hairline);background:var(--elevated);color:var(--label);border-radius:999px;padding:4px 14px;font-size:12px;font-weight:700;">⧉ copy</button> — include your order ID.</footer>
 </div>
 <script>
 (function(){
@@ -202,6 +202,8 @@ footer a{color:var(--accent);font-weight:700;text-decoration:none}
   }
   var cp = document.getElementById("copyKey");
   if(cp) cp.onclick = function(){ copyText(document.getElementById("keyVal").textContent, "Key copied."); };
+  var cm = document.getElementById("copyMail");
+  if(cm) cm.onclick = function(){ copyText("pineapplefx.store@gmail.com"); cm.textContent = "✓ copied!"; setTimeout(function(){ cm.textContent = "⧉ copy"; }, 2000); };
 })();
 </script>
 </body>
