@@ -17,28 +17,55 @@ import pathlib
 import secrets
 import sys
 
+import re
+
 BASE = pathlib.Path(__file__).resolve().parent.parent
-DATA_DIR = pathlib.Path(os.environ.get('DATA_DIR', BASE / 'site' / 'data'))
+# Works both before (site/data) and after (root data) the Pages move.
+DATA_DIRS = [
+    pathlib.Path(os.environ.get('DATA_DIR')) if os.environ.get('DATA_DIR') else None,
+    BASE / 'data',
+    BASE / 'site' / 'data',
+]
+DATA_DIRS = [d for d in DATA_DIRS if d]
+DATA_DIR = DATA_DIRS[0]
 DB_FILE = DATA_DIR / 'pfx-db.json'
+
+EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+MIN_PASSWORD_LEN = 6
+
+
+def clean_email(raw):
+    return str(raw or '').strip().strip('"\'').lower()
+
+
+def clean_password(raw):
+    return str(raw or '').strip().strip('"\'')
+
+
+def valid_email(email):
+    return bool(EMAIL_RE.match(email))
+
+
+def valid_password(password):
+    return len(password) >= MIN_PASSWORD_LEN
 
 
 def main():
     if len(sys.argv) < 3:
         print('usage: py tools/seed_admin.py admin@mail.com StrongPass123')
         sys.exit(1)
-    email = sys.argv[1].strip().strip('"\'').lower()
-    password = sys.argv[2].strip().strip('"\'')
-    if '@' not in email or len(password) < 4:
-        print('refusing: bad email or password too short')
+    email = clean_email(sys.argv[1])
+    password = clean_password(sys.argv[2])
+    if not valid_email(email) or not valid_password(password):
+        print('refusing: bad email or password too short '
+              '(need valid email + password of at least %d characters)' % MIN_PASSWORD_LEN)
         sys.exit(1)
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    ALT_DIR = BASE / 'data'
-    ALT_DIR.mkdir(parents=True, exist_ok=True)
-    ALT_DB_FILE = ALT_DIR / 'pfx-db.json'
+    for d in DATA_DIRS:
+        d.mkdir(parents=True, exist_ok=True)
 
     db = json.loads(DB_FILE.read_text(encoding='utf-8')) if DB_FILE.exists() else {}
-    for table in ('users', 'licenses', 'machines', 'coupons', 'audit'):
+    for table in ('users', 'licenses', 'machines', 'coupons', 'partners', 'slots', 'audit'):
         db.setdefault(table, {} if table != 'audit' else [])
     db.setdefault('pricing', {'regular': '30.00', 'launch': '20.00',
                               'launchEnd': '2026-11-01T00:00:00Z'})
@@ -59,8 +86,11 @@ def main():
     db['audit'] = [{'at': created, 'actor': 'seed',
                     'action': 'admin-seeded', 'detail': email}] + db.get('audit', [])
     content = json.dumps(db, indent=2)
-    DB_FILE.write_text(content, encoding='utf-8')
-    ALT_DB_FILE.write_text(content, encoding='utf-8')
+    for d in DATA_DIRS:
+        try:
+            (d / 'pfx-db.json').write_text(content, encoding='utf-8')
+        except OSError:
+            pass
     print('admin ready: %s  (db: %s)' % (email, DB_FILE))
 
 

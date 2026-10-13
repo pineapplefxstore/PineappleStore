@@ -20,7 +20,9 @@ except (AttributeError, OSError):
     pass
 
 BASE = pathlib.Path(__file__).resolve().parent.parent
-SITE = BASE / 'site'
+# Dual layout: repo root serves the site directly (GitHub Pages custom domain),
+# with `site/` kept as legacy fallback until the move lands everywhere.
+SITE = BASE if (BASE / 'index.html').exists() else (BASE / 'site')
 ERRORS, WARNS = [], []
 
 
@@ -43,9 +45,10 @@ for rel in ('index.html', 'store.html', 'dashboard.html', 'install.html',
             'faq.html', 'admin.html', 'success.html',
             'assets/site.css', 'assets/premium.css', 'assets/logo.png',
             'assets/pfx-core.js', 'assets/pfx-preview.js',
-            'assets/pfx-licensing.js', 'assets/pfx-admin.js'):
+            'assets/pfx-licensing.js', 'assets/pfx-admin.js',
+            'assets/pfx-affiliates.js'):
     (ok('page/asset present: ' + rel) if (SITE / rel).exists()
-     else err('missing required file: site/' + rel))
+     else err('missing required file: ' + str(SITE.relative_to(BASE) / rel) if SITE != BASE else rel))
 
 # ---- 2. relative paths only (GitHub Pages serves a /<repo>/ subpath) ------
 for page in ('index.html', 'store.html', 'dashboard.html', 'install.html',
@@ -123,7 +126,10 @@ else:
 # ---- 7. staged .zxp: exists, valid zip, same gate --------------------------
 zxp = SITE / 'downloads' / 'PineappleFX.zxp'
 if not zxp.exists():
-    err('missing site/downloads/PineappleFX.zxp (run the release chain)')
+    # Legacy spot kept for older checkouts.
+    zxp = BASE / 'site' / 'downloads' / 'PineappleFX.zxp'
+if not zxp.exists():
+    err('missing downloads/PineappleFX.zxp (run the release chain)')
 else:
     try:
         with zipfile.ZipFile(zxp) as z:
@@ -146,7 +152,7 @@ else:
         else:
             err('staged .zxp manifest id wrong')
     except zipfile.BadZipFile:
-        err('site/downloads/PineappleFX.zxp is not a valid zip')
+        err('downloads/PineappleFX.zxp is not a valid zip')
 
 # ---- 8. production VERIFY_URL baked? (warning — needs the API host) --------
 gate_src = (BASE / 'PineappleFX' / 'dist' / 'index.html').read_text(encoding='utf-8', errors='replace') \

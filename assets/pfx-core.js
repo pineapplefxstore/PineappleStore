@@ -486,6 +486,25 @@
     if(admin && window.PFXAdmin) window.PFXAdmin.refresh();
     var menuA = document.getElementById("menuAdmin");
     if(menuA) menuA.style.display = admin ? "" : "none";
+    paintAdminButton(admin, s);
+  }
+  /* Easy one-click button for the owner: shows on every page when the
+     owner (pineapplefx.store@gmail.com) is logged in as admin. */
+  function paintAdminButton(admin, session){
+    var isOwner = String(session || "").trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    var show = !!(admin && isOwner);
+    // Never show the shortcut on the admin page itself.
+    try { if(/admin\.html$/.test(location.pathname)) show = false; } catch(e){}
+    var b = document.getElementById("ownerAdminBtn");
+    if(show && !b){
+      b = document.createElement("a");
+      b.id = "ownerAdminBtn";
+      b.href = "admin.html";
+      b.textContent = "⚙ Open Admin Panel";
+      b.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:9990;background:#feca08;color:#111;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.45);";
+      document.body.appendChild(b);
+    }
+    if(b) b.style.display = show ? "" : "none";
   }
   var orderLogin = document.getElementById("orderLogin");
   if(orderLogin) orderLogin.onclick = function(e){ if(e && e.preventDefault) e.preventDefault(); openAuth("signup"); };

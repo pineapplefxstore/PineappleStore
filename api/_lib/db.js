@@ -1,7 +1,7 @@
 /**
  * PineappleFX file-backed database (default adapter).
  *
- * Tables: users, licenses, machines, coupons, slots, pricing, audit.
+ * Tables: users, licenses, machines, coupons, partners, slots, pricing, audit.
  * - DATA_DIR env selects the storage dir (default ./data next to the repo).
  * - On read-only/ephemeral serverless FS, falls back to in-memory + warns.
  * - SWAP POINT: replace loadTable/saveTable with Postgres/Supabase calls;
@@ -33,6 +33,7 @@ const DEFAULTS = () => ({
   licenses: {}, // normKey -> { key, email, machine, created, revoked, revokedAt, source }
   machines: {}, // machine -> { machine, email, key, firstSeen, lastSeen }
   coupons: {}, // CODE -> { kind, pct, note, maxUses, uses, created }
+  partners: {}, // id -> { id, name, email, code, created, by } — affiliate program: who you sponsor + which code they share
   slots: {}, // emailLower -> { claimed, orderID, machine, key, amount, at } — one-time $7.90 extra-machine deal
   pricing: { regular: "30.00", launch: "20.00", launchEnd: "2026-11-01T00:00:00Z" },
   audit: [], // { at, actor, action, detail } — capped

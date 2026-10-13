@@ -35,24 +35,26 @@
 </div></nav>
 
 <header class="page-hero"><div class="wrap">
-  <span class="kicker">Restricted</span>
+  <span class="kicker">Private</span>
   <h1>Admin Panel</h1>
-  <p>Store overview, accounts, licenses, coupons, and pricing control.</p>
+  <p>See sales, people, keys, discount codes, prices, and partners — all in plain words.</p>
+  <p id="adminQuick" style="display:none;margin-top:10px;"><a class="btn btn-pay" href="admin.html" style="padding:10px 22px;">⚙ Open Admin Panel — you are logged in as pineapplefx.store@gmail.com</a></p>
 </div></header>
 
 <section id="admin" style="display:none;"><div class="wrap" style="max-width:720px">
   <div class="lic-form" id="srvCard">
-    <b>Server connection <span id="srvBadge" class="tag" style="font-size:11px;font-weight:800;border:1px solid var(--hairline);border-radius:999px;padding:2px 10px;color:var(--label-2);">○ local mode</span></b>
-    <p style="font-size:13px;color:var(--label-2);" id="srvHint">Local mode: this browser's data only. Connect to the backend for live multi-device data, revocation, and pricing control.</p>
+    <b>Shop link <span id="srvBadge" class="tag" style="font-size:11px;font-weight:800;border:1px solid var(--hairline);border-radius:999px;padding:2px 10px;color:var(--label-2);">○ local mode</span></b>
+    <p style="font-size:13px;color:var(--label-2);" id="srvHint">Local mode: you only see this browser's data. Type your admin password below to see live shop data on all devices.</p>
     <div class="admin-form" id="srvForm">
-      <label for="srvPass">Server admin password<input id="srvPass" type="password" autocomplete="current-password" placeholder="set via tools/seed_admin.py" /></label>
+      <label for="srvEmail">Admin email<input id="srvEmail" type="email" value="pineapplefx.store@gmail.com" readonly style="opacity:.8;" /></label>
+      <label for="srvPass">Admin password<input id="srvPass" type="password" autocomplete="current-password" placeholder="PineappleAdmin2026!" /></label>
       <button class="btn btn-pay" id="srvConnect" type="button" style="width:100%;">Connect to server</button>
       <p class="auth-err" id="srvErr" style="min-height:18px;"></p>
     </div>
     <button class="mini-btn" id="srvDisconnect" type="button" style="display:none;">Disconnect</button>
   </div>
   <div class="lic-form" id="priceCard" style="margin-top:12px;display:none;">
-    <b>Dynamic pricing control <span style="font-size:11px;color:var(--label-3);font-weight:400;">(server, overrides site defaults)</span></b>
+    <b>Prices <span style="font-size:11px;color:var(--label-3);font-weight:400;">(change the store price any time)</span></b>
     <div class="admin-form">
       <label for="prReg">Regular price (USD)<input id="prReg" type="text" inputmode="decimal" placeholder="30.00" /></label>
       <label for="prLaunch">Launch price (USD)<input id="prLaunch" type="text" inputmode="decimal" placeholder="20.00" /></label>
@@ -68,8 +70,8 @@
     <div id="auditBox" style="margin-top:10px;"></div>
   </div>
   <div class="lic-form" style="margin-top:12px;">
-    <b>Coupon generator</b>
-    <p style="font-size:13px;color:var(--label-2);">Create a code, pick free or % off, optionally cap redemptions. In <b>live server</b> mode codes land straight in the database (no env mirroring needed); in local mode they work on this device only.</p>
+    <b>Discount codes</b>
+    <p style="font-size:13px;color:var(--label-2);">Make a code, pick free or % off. When you are connected, codes save to the shop right away. When offline, they work on this device only.</p>
     <div class="admin-form">
       <label for="cpCode">Code
         <span style="display:flex;gap:8px;margin-top:5px;">
@@ -92,7 +94,26 @@
     <div id="couponList"></div>
   </div>
   <div class="lic-form" style="margin-top:12px;">
-    <b>Users &amp; licenses</b>
+    <b>Partner program — who brings buyers?</b>
+    <p style="font-size:13px;color:var(--label-2);">Add a person you sponsor. Give them one discount code. Then see how many buyers used their code. Easy list, best partner on top.</p>
+    <div id="partnerStats" style="font-size:13px;color:var(--label-2);margin:6px 0;"></div>
+    <div class="admin-form">
+      <label for="ptName">Person's name<input id="ptName" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Alex on YouTube" /></label>
+      <label for="ptEmail">Person's email (optional)<input id="ptEmail" type="email" autocomplete="off" placeholder="alex@mail.com" /></label>
+      <label for="ptCode">Their discount code
+        <span style="display:flex;gap:8px;margin-top:5px;">
+          <input id="ptCode" class="mono" autocomplete="off" spellcheck="false" placeholder="PFX-ALEX-2026" style="margin-top:0;" />
+          <button class="mini-btn" id="ptRandom" type="button" style="padding:10px 16px;">🎲</button>
+        </span>
+      </label>
+      <button class="btn btn-pay" id="ptAdd" type="button" style="width:100%;">Add partner</button>
+      <p class="auth-err" id="ptErr" style="min-height:18px;"></p>
+      <p style="font-size:12px;color:var(--label-3);">Tip: first make the same code above in “Discount codes” (or just type a new code here and then make it above). Uses count up by themselves when buyers pay.</p>
+    </div>
+    <div id="partnerList"></div>
+  </div>
+  <div class="lic-form" style="margin-top:12px;">
+    <b>People &amp; keys</b>
     <div style="height:10px;"></div>
     <div id="adminUsers"></div>
     <button class="mini-btn" id="adminExport" type="button" style="margin-top:6px;">⬇ Export backup (JSON)</button>
@@ -102,11 +123,12 @@
 <section id="adminLocked"><div class="wrap" style="max-width:640px">
   <div class="lic-form" style="text-align:center;">
     <div style="font-size:28px;">🔒</div>
-    <b>Restricted area</b>
-    <p style="font-size:13.5px;color:var(--label-2);">This control center is visible only to the Pineapple Store admin. Log in with the admin account to continue.</p>
+    <b>Private area</b>
+    <p style="font-size:13.5px;color:var(--label-2);">Only the shop owner can see this page. Log in with the owner email to continue.</p>
     <div style="max-width:340px;margin:16px auto 0;text-align:left;" class="admin-form">
-      <label for="adminLockedPass">Admin password<input id="adminLockedPass" type="password" autocomplete="current-password" placeholder="PineappleAdmin2026!" /></label>
-      <button class="btn btn-pay" id="adminLockedSubmit" type="button" style="width:100%;">Connect &amp; Authenticate</button>
+      <label for="adminLockedEmail">Owner email<input id="adminLockedEmail" type="email" value="pineapplefx.store@gmail.com" readonly style="opacity:.8;" /></label>
+      <label for="adminLockedPass">Owner password<input id="adminLockedPass" type="password" autocomplete="current-password" placeholder="PineappleAdmin2026!" /></label>
+      <button class="btn btn-pay" id="adminLockedSubmit" type="button" style="width:100%;">Connect &amp; Open Panel</button>
       <p class="auth-err" id="adminLockedErr" style="min-height:18px;text-align:center;"></p>
     </div>
     <div style="margin-top:6px;">
@@ -161,6 +183,7 @@
 
 <script src="./assets/pfx-core.js"></script>
 <script src="./assets/pfx-admin.js"></script>
+<script src="./assets/pfx-affiliates.js"></script>
 <script>
 (function(){
   function paintLock(){
@@ -174,11 +197,21 @@
     if(nav) nav.style.display = admin ? "" : "none";
     var menu = document.getElementById("menuAdmin");
     if(menu) menu.style.display = admin ? "" : "none";
+    var quick = document.getElementById("adminQuick");
+    if(quick) quick.style.display = admin ? "" : "none";
   }
-  if(window.PFXAuth) window.PFXAuth.onChange(function(){ paintLock(); if(window.PFXAdmin) window.PFXAdmin.refresh(); });
+  function refreshAll(){
+    paintLock();
+    if(window.PFXAdmin) window.PFXAdmin.refresh();
+    if(window.PFXPartners) window.PFXPartners.refresh();
+  }
+  if(window.PFXAuth) window.PFXAuth.onChange(function(){ refreshAll(); });
   paintLock();
   if(window.PFXAdmin) window.PFXAdmin.refresh();
+  if(window.PFXPartners) { window.PFXPartners.bind(); window.PFXPartners.refresh(); }
   document.getElementById("adminLoginBtn").onclick = function(){ if(window.PFXOpenAuth) window.PFXOpenAuth("login"); };
+  // Keep the badge honest: re-check live state when the page shows.
+  setTimeout(function(){ if(window.PFXAdmin) window.PFXAdmin.refresh(); }, 800);
 })();
 </script>
 </body>

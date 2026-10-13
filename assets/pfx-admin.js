@@ -199,8 +199,8 @@
     var hint = document.getElementById("srvHint");
     if(hint){
       hint.textContent = live
-        ? "Connected — tables below are live database data. Revokes, deletes, and pricing take effect immediately."
-        : "Local mode: this browser's data only. Connect to the backend for live multi-device data, revocation, and pricing control.";
+        ? "Connected — the lists below are live shop data. Changes work right away."
+        : "Local mode: you only see this browser's data. Type your admin password to see live shop data on all devices.";
     }
     var pc = document.getElementById("priceCard");
     if(pc) pc.style.display = live ? "" : "none";
@@ -548,6 +548,7 @@
     paintLockState();
     if(!isAdmin()) return;
     paintServerChrome();
+    if(window.PFXPartners && window.PFXPartners.refresh){ try { window.PFXPartners.refresh(); } catch(e){} }
     if(window.PFXServer.live()){ renderAdminServer(); return; }
 
     // Fallback local mode

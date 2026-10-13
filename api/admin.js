@@ -239,6 +239,56 @@ export default async function handler(req, res) {
     return json(res, 200, { ok: true });
   }
 
+  /* ---------- partners (affiliate program: people you sponsor) ---------- */
+  if (action === "partners") {
+    const partners = db.all("partners") || {};
+    const coupons = db.all("coupons") || {};
+    const licenses = db.all("licenses") || {};
+    const rows = Object.values(partners).map((p) => {
+      const code = String(p.code || "").toUpperCase();
+      const c = coupons[code] || coupons[String(p.code || "")] || null;
+      let uses = c ? (c.uses || 0) : 0;
+      // Count real license records made with this code too (source of truth).
+      let sales = 0;
+      for (const rec of Object.values(licenses)) {
+        if (String(rec.coupon || "").toUpperCase() === code) sales++;
+      }
+      return { ...p, uses: Math.max(uses, sales), sales };
+    });
+    rows.sort((a, b) => (b.uses || 0) - (a.uses || 0));
+    const totalUses = rows.reduce((n, r) => n + (r.uses || 0), 0);
+    return json(res, 200, { ok: true, partners: rows, totalUses });
+  }
+
+  if (action === "partner-add") {
+    const name = String(body.name || "").trim().slice(0, 60);
+    const code = String(body.code || "").trim().toUpperCase();
+    const email = String(body.email || "").trim().toLowerCase().slice(0, 120);
+    if (!name) return json(res, 400, { ok: false, error: "missing-name" });
+    if (!CODE_RE.test(code)) return json(res, 400, { ok: false, error: "bad-code" });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { ok: false, error: "bad-email" });
+    const partners = db.all("partners") || {};
+    for (const p of Object.values(partners)) {
+      if (String(p.code || "").toUpperCase() === code) return json(res, 409, { ok: false, error: "code-taken" });
+    }
+    const id = db.uid();
+    const rec = { id, name, code, email, created: new Date().toISOString(), by: me };
+    // Ensure the table exists on old DBs.
+    try { db.set("partners", id, rec); } catch { return json(res, 500, { ok: false, error: "db-error" }); }
+    db.audit(me, "partner-add", `${name} / ${code}`);
+    return json(res, 200, { ok: true, partner: rec });
+  }
+
+  if (action === "partner-delete") {
+    const id = String(body.id || "");
+    const partners = db.all("partners") || {};
+    if (!id || !partners[id]) return json(res, 404, { ok: false, error: "not-found" });
+    const gone = partners[id];
+    db.remove("partners", id);
+    db.audit(me, "partner-delete", `${gone.name} / ${gone.code}`);
+    return json(res, 200, { ok: true });
+  }
+
   /* ---------- pricing ---------- */
   if (action === "pricing") {
     return json(res, 200, { ok: true, pricing: db.all("pricing") });
