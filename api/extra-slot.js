@@ -16,7 +16,7 @@
  * /api/verify-license and the admin panel treat it like any other key.
  */
 import { db } from "./_lib/db.js";
-import { cors, json, readBody, isAccountDisabled } from "./_lib/auth.js";
+import { cors, json, readBody, isAccountDisabled, rateLimit, clientIp } from "./_lib/auth.js";
 import {
   normalizeKey,
   normalizeMachineId,
@@ -32,8 +32,8 @@ export function slotFor(email) {
 }
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    cors(res);
     return res.status(204).end();
   }
 
@@ -60,6 +60,10 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return json(res, 405, { ok: false, error: "method-not-allowed" });
   }
+
+  const rl = rateLimit("slot:" + clientIp(req), 20, 3600 * 1000);
+  if (!rl.ok)
+    return json(res, 429, { ok: false, error: "too-many-requests" }, { "Retry-After": String(rl.retryAfter) });
 
   const body = readBody(req);
   const email = String(body.email || "").trim().toLowerCase();

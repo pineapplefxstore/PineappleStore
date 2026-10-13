@@ -33,7 +33,7 @@
  */
 import crypto from "node:crypto";
 import { db } from "./_lib/db.js";
-import { isAccountDisabled } from "./_lib/auth.js";
+import { isAccountDisabled, cors, json, readBody, rateLimit, clientIp } from "./_lib/auth.js";
 import {
   ALPHA,
   fnv1a,
@@ -97,26 +97,6 @@ function normCouponValue(v) {
   if (typeof v === "number" && v >= 1 && v <= 99) return `percent:${Math.round(v)}`;
   if (typeof v === "string" && /^percent:([1-9][0-9]?)$/.test(v)) return v;
   return "invalid";
-}
-
-function json(res, status, obj) {
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  return res.status(status).json(obj);
-}
-
-function readBody(req) {
-  if (req.body && typeof req.body === "object") return req.body;
-  if (typeof req.body === "string") {
-    try {
-      return JSON.parse(req.body || "{}");
-    } catch {
-      return {};
-    }
-  }
-  return {};
 }
 
 /**
@@ -237,15 +217,18 @@ async function sendViaSendGrid({ to, subject, text, html }) {
 }
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     return res.status(204).end();
   }
   if (req.method !== "POST") {
     return json(res, 405, { ok: false, error: "method-not-allowed" });
   }
+
+  // Email-sending endpoint: strict rate limit stops spam abuse.
+  const rl = rateLimit("gen:" + clientIp(req), 20, 3600 * 1000);
+  if (!rl.ok)
+    return json(res, 429, { ok: false, error: "too-many-requests" }, { "Retry-After": String(rl.retryAfter) });
 
   const body = readBody(req);
   const email = String(

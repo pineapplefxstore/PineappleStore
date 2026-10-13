@@ -15,18 +15,22 @@
  */
 import crypto from "node:crypto";
 import { db } from "./_lib/db.js";
-import { json, readBody, signJWT } from "./_lib/auth.js";
+import { json, readBody, signJWT, rateLimit, clientIp } from "./_lib/auth.js";
 import { normalizeKey, normalizeMachineId, verifySignature } from "./_lib/license.js";
 
 const TOKEN_TTL = parseInt(process.env.LICENSE_TOKEN_TTL || "2592000", 10); // 30d
 
 export default async function handler(req, res) {
+  const { cors } = await import("./_lib/auth.js");
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    const { cors } = await import("./_lib/auth.js");
-    cors(res);
     return res.status(204).end();
   }
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method-not-allowed" });
+
+  const rl = rateLimit("verify:" + clientIp(req), 120, 10 * 60 * 1000);
+  if (!rl.ok)
+    return json(res, 429, { ok: false, error: "too-many-requests" }, { "Retry-After": String(rl.retryAfter) });
 
   const body = readBody(req);
   const machine = normalizeMachineId(body.machine_id || body.machineId || body.device);

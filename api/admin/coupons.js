@@ -11,8 +11,8 @@ const BUILTIN_COUPONS = {
 };
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    cors(res);
     return res.status(204).end();
   }
 

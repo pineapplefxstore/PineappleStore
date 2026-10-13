@@ -89,18 +89,83 @@ export function bearerToken(req) {
 }
 
 /* ---- HTTP helpers shared by all endpoints ---- */
-export function cors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+
+/* Closed-by-default CORS: only our own shop origins get ACAO.
+   Override/extend with ALLOWED_ORIGINS="https://a.example,https://b.example".
+   *.vercel.app previews + localhost are allowed for development. */
+const DEFAULT_ORIGINS = [
+  "https://www.pineapplestore.us.ci",
+  "https://pineapplestore.us.ci",
+  "https://pineapplefxstore.github.io",
+];
+const DEV_SUFFIXES = [".vercel.app"];
+
+function allowedOrigins() {
+  const extra = String(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  return [...new Set([...DEFAULT_ORIGINS, ...extra])];
+}
+
+function originAllowed(origin) {
+  if (!origin) return false;
+  const o = String(origin).replace(/\/$/, "");
+  if (allowedOrigins().includes(o)) return true;
+  try {
+    const u = new URL(o);
+    if (DEV_SUFFIXES.some((s) => u.hostname.endsWith(s))) return true;
+    if ((u.hostname === "localhost" || u.hostname === "127.0.0.1") &&
+        (u.protocol === "http:" || u.protocol === "https:")) return true;
+  } catch { return false; }
+  return false;
+}
+
+export function cors(req, res) {
+  const origin = req?.headers?.origin || req?.headers?.Origin || "";
+  if (origin && originAllowed(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", String(origin).replace(/\/$/, ""));
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
 export function json(res, status, obj, extraHeaders) {
-  cors(res);
   res.setHeader("Content-Type", "application/json");
+  res.setHeader("X-Content-Type-Options", "nosniff");
   if (extraHeaders) for (const k of Object.keys(extraHeaders)) res.setHeader(k, extraHeaders[k]);
   return res.status(status).json(obj);
 }
+
+/* In-memory per-instance rate limiter (serverless-safe best effort:
+   each instance tracks its own callers; still stops casual brute force). */
+const __hits = new Map(); // key -> [timestamps]
+function prune(key, windowMs) {
+  const now = Date.now();
+  const arr = (__hits.get(key) || []).filter((t) => now - t < windowMs);
+  __hits.set(key, arr);
+  return arr;
+}
+
+export function rateLimit(key, max, windowMs) {
+  const arr = prune(key, windowMs);
+  if (arr.length >= max) {
+    const retryAfter = Math.max(1, Math.ceil((arr[0] + windowMs - Date.now()) / 1000));
+    return { ok: false, retryAfter };
+  }
+  arr.push(Date.now());
+  __hits.set(key, arr);
+  return { ok: true, retryAfter: 0 };
+}
+
+export function clientIp(req) {
+  const fwd = req?.headers?.["x-forwarded-for"] || req?.headers?.["X-Forwarded-For"] || "";
+  const ip = String(fwd).split(",")[0].trim() || req?.socket?.remoteAddress || "unknown";
+  return ip.slice(0, 64);
+}
+
+const MAX_BODY_BYTES = 64 * 1024;
 
 export function readBody(req) {
   if (req.body && typeof req.body === "object") return req.body;

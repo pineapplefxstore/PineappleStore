@@ -24,8 +24,8 @@ import { mintLicense, normalizeKey, normalizeMachineId, verifySignature } from "
 const CODE_RE = /^[A-Z0-9-]{4,24}$/;
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    cors(res);
     return res.status(204).end();
   }
   if (req.method !== "POST" && req.method !== "DELETE") return json(res, 405, { ok: false, error: "method-not-allowed" });

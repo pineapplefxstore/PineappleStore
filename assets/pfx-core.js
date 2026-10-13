@@ -159,7 +159,7 @@
     signup: function(email, pass){
       email = String(email || "").trim().toLowerCase();
       if(!authValidEmail(email)) return Promise.resolve({ ok: false, error: "Enter a valid email address." });
-      if(String(pass || "").length < 4) return Promise.resolve({ ok: false, error: "Password needs at least 4 characters." });
+      if(String(pass || "").length < 8) return Promise.resolve({ ok: false, error: "Password needs at least 8 characters." });
       var users = authUsers();
       if(users[email]) return Promise.resolve({ ok: false, error: "Account exists — log in instead." });
       var salt = "";

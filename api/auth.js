@@ -18,14 +18,23 @@ import {
   verifyJWT,
   verifyPassword,
   bearerToken,
+  rateLimit,
+  clientIp,
 } from "./_lib/auth.js";
 
 const SESSION_TTL = 7 * 24 * 3600;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LEN = 8;
+// Fixed dummy hash so a login for a missing account costs the same scrypt
+// work as a real one (no timing shortcut reveals whether an email exists).
+const DUMMY_HASH =
+  "scrypt$n=16384,r=8,p=1,keylen=32$" +
+  "00000000000000000000000000000000$" +
+  "0000000000000000000000000000000000000000000000000000000000000000";
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    cors(res);
     return res.status(204).end();
   }
   const isGetMe = req.method === "GET";
@@ -43,10 +52,18 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method-not-allowed" });
 
+  // Brute-force guard: slow down password guessing per visitor.
+  const rl = rateLimit("auth:" + clientIp(req), 30, 10 * 60 * 1000);
+  if (!rl.ok)
+    return json(res, 429, { ok: false, error: "too-many-requests" }, { "Retry-After": String(rl.retryAfter) });
+
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
   if (!EMAIL_RE.test(email)) return json(res, 400, { ok: false, error: "bad-email" });
-  if (password.length < 4) return json(res, 400, { ok: false, error: "bad-password" });
+  if (action === "signup" && password.length < MIN_PASSWORD_LEN)
+    return json(res, 400, { ok: false, error: "bad-password" });
+  if (password.length < 1 || password.length > 256)
+    return json(res, 400, { ok: false, error: "bad-password" });
 
   const adminEmail = String(process.env.ADMIN_EMAIL || "pineapplefx.store@gmail.com").toLowerCase();
 
@@ -72,7 +89,8 @@ export default async function handler(req, res) {
 
   if (action === "login") {
     const u = users[email];
-    if (!u || !verifyPassword(password, `${u.alg}$${u.salt}$${u.hash}`))
+    const stored = u ? `${u.alg}$${u.salt}$${u.hash}` : DUMMY_HASH;
+    if (!u || !verifyPassword(password, stored))
       return json(res, 401, { ok: false, error: "bad-credentials" });
     if (u.disabled) {
       db.audit(email, "login-blocked-disabled", "");

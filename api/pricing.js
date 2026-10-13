@@ -8,8 +8,8 @@ import { db } from "./_lib/db.js";
 import { cors, json } from "./_lib/auth.js";
 
 export default async function handler(req, res) {
+  cors(req, res);
   if (req.method === "OPTIONS") {
-    cors(res);
     return res.status(204).end();
   }
   if (req.method !== "GET") return json(res, 405, { ok: false, error: "method-not-allowed" });
