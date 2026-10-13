@@ -553,17 +553,22 @@
 
     // Fallback local mode
     var users = authUsers(), vault = lsGet("pfx-licenses", {}), coupons = window.PFXCoupons.all();
-    var nLic = 0, emails = Object.keys(users);
-    emails.forEach(function(em){ nLic += Object.keys(vault[em] || {}).length; });
+    var nLic = 0, emails = Object.keys(users), nComputers = 0;
+    emails.forEach(function(em){
+      var ms = vault[em] || {};
+      nLic += Object.keys(ms).length;
+      nComputers += Object.keys(ms).length;
+    });
     var paid = paidEstimate();
     var rev = (paid * parseFloat(basePrice())).toFixed(2);
     var adminStats = document.getElementById("adminStats");
     if(adminStats){
       adminStats.innerHTML =
-        statCard(users ? emails.length : 0, "accounts")
-        + statCard(nLic, "licenses issued")
-        + statCard(Object.keys(coupons).length, "coupons")
-        + statCard("$" + rev, "est. revenue");
+        statCard(users ? emails.length : 0, "people")
+        + statCard(nLic, "keys made")
+        + statCard(nComputers, "computers using keys")
+        + statCard(Object.keys(coupons).length, "discount codes")
+        + statCard("$" + rev, "about earned");
     }
 
     // local coupons
@@ -600,10 +605,11 @@
 
     // local users
     var ub = document.getElementById("adminUsers"), uh = "";
-    if(!emails.length) uh = '<p style="font-size:13px;color:var(--label-2);">No accounts yet.</p>';
+    if(!emails.length) uh = '<p style="font-size:13px;color:var(--label-2);">No people yet. When buyers sign up on this device, they show up here.</p>';
     emails.sort().forEach(function(em){
       var ms = vault[em] || {}, keys = Object.keys(ms).sort();
-      uh += '<div class="user-block"><b>' + escHtml(em) + '</b> <span style="color:var(--label-3);font-size:12px;">· ' + keys.length + ' machine' + (keys.length === 1 ? "" : "s") + '</span>';
+      uh += '<div class="user-block"><b>' + escHtml(em) + '</b> <span style="color:var(--label-3);font-size:12px;">· ' + keys.length + ' computer' + (keys.length === 1 ? "" : "s") + '</span>'
+        + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
         uh += '<div class="dash-row" style="margin:8px 0 0;"><span class="mid">' + escHtml(mch) + '</span>'
           + '<span class="key">' + escHtml(ms[mch].key || "") + '</span>'
@@ -613,6 +619,28 @@
     });
     if(ub){
       ub.innerHTML = uh;
+      Array.prototype.forEach.call(ub.querySelectorAll("[data-del-person]"), function(b){
+        b.onclick = function(){
+          var em = b.getAttribute("data-del-person");
+          openConfirmModal({
+            title: "Remove person",
+            message: "Remove <b>" + escHtml(em) + "</b> and all their keys on this device? They can sign up again later.",
+            confirmText: "Remove person",
+            isDanger: true
+          }).then(function(confirmed){
+            if(!confirmed) return;
+            var usersNow = authUsers();
+            delete usersNow[em];
+            lsSet("pfx-users", usersNow);
+            var v = lsGet("pfx-licenses", {});
+            delete v[em];
+            lsSet("pfx-licenses", v);
+            showToast("Person removed");
+            renderAdmin();
+            if(window.PineappleFXLic && window.PineappleFXLic.refreshDashboard) window.PineappleFXLic.refreshDashboard();
+          });
+        };
+      });
       Array.prototype.forEach.call(ub.querySelectorAll("[data-revoke]"), function(b){
         b.onclick = function(){
           var parts = b.getAttribute("data-revoke").split("|");

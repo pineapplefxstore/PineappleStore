@@ -42,9 +42,18 @@
     return "https://paypal.me/sxiiedits/" + priceNum(amount) + "USD"; // custom % coupons
   }
   var ADMIN_EMAIL = "pineapplefx.store@gmail.com";
-  function isAdmin(){
+  function isOwner(){
     var em = String(authSession() || "").trim().toLowerCase();
-    if(em !== ADMIN_EMAIL.toLowerCase()) return false;
+    return em === ADMIN_EMAIL.toLowerCase();
+  }
+  function isAdmin(){
+    // The owner is always admin on their own device, including local mode
+    // (no server). Live server actions still need the login token —
+    // see window.PFXServer.live() in pfx-admin.js.
+    return isOwner();
+  }
+  function isLiveAdmin(){
+    if(!isOwner()) return false;
     var tok = "";
     try { tok = localStorage.getItem("pfx-admin-token") || ""; } catch(e){}
     var isAdm = false;
@@ -253,7 +262,7 @@
     couponDef: couponDef, couponUsable: couponUsable, couponAmount: couponAmount,
     basePrice: basePrice, halfPrice: halfPrice, launchActive: launchActive,
     priceNum: priceNum, paintCoupon: paintCoupon, renderPP: renderPP,
-    ADMIN_EMAIL: ADMIN_EMAIL, isAdmin: isAdmin, refreshServerPricing: refreshServerPricing
+    ADMIN_EMAIL: ADMIN_EMAIL, isAdmin: isAdmin, isOwner: isOwner, isLiveAdmin: isLiveAdmin, refreshServerPricing: refreshServerPricing
   };
   /* Admin-controlled pricing override: try /api/pricing once (3s); fall back
      to baked-in defaults so file:// and offline previews keep working. */
@@ -489,10 +498,12 @@
     paintAdminButton(admin, s);
   }
   /* Easy one-click button for the owner: shows on every page when the
-     owner (pineapplefx.store@gmail.com) is logged in as admin. */
+     owner (pineapplefx.store@gmail.com) is logged in — next to My Licenses. */
   function paintAdminButton(admin, session){
-    var isOwner = String(session || "").trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
-    var show = !!(admin && isOwner);
+    var isOwnerNow = false;
+    try { isOwnerNow = window.PFXCore ? window.PFXCore.isOwner() : false; } catch(e){}
+    if(!isOwnerNow) isOwnerNow = String(session || "").trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    var show = !!(admin && isOwnerNow);
     // Never show the shortcut on the admin page itself.
     try { if(/admin\.html$/.test(location.pathname)) show = false; } catch(e){}
     var b = document.getElementById("ownerAdminBtn");

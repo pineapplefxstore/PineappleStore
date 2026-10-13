@@ -49,10 +49,14 @@
     }
     box.innerHTML = parts.map(function (p) {
       var uses = couponUses(p.code);
-      return '<div class="coupon-row"><code>' + esc(p.code) + '</code>'
+      var top = 0;
+      parts.forEach(function (q) { top = Math.max(top, couponUses(q.code)); });
+      var pct = top > 0 ? Math.round((uses / top) * 100) : 0;
+      return '<div class="coupon-row" style="display:block;"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><code>' + esc(p.code) + '</code>'
         + '<span class="tag">' + uses + ' uses</span>'
         + '<span class="note">' + esc(p.name) + (p.email ? " · " + esc(p.email) : "") + '</span>'
-        + '<button class="danger-btn del-cpn-btn" data-del-partner="' + esc(p.id) + '" type="button">Remove</button></div>';
+        + '<button class="danger-btn del-cpn-btn" data-del-partner="' + esc(p.id) + '" type="button">Remove</button></div>'
+        + '<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#feca08;border-radius:999px;"></div></div></div>';
     }).join("");
     Array.prototype.forEach.call(box.querySelectorAll("[data-del-partner]"), function (b) {
       b.onclick = function () {
@@ -84,11 +88,15 @@
         return;
       }
       box.innerHTML = rows.map(function (p) {
-        return '<div class="coupon-row"><code>' + esc(p.code) + '</code>'
+        var top = 0;
+        rows.forEach(function (q) { top = Math.max(top, q.uses || 0); });
+        var pct = top > 0 ? Math.round(((p.uses || 0) / top) * 100) : 0;
+        return '<div class="coupon-row" style="display:block;"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><code>' + esc(p.code) + '</code>'
           + '<span class="tag">' + (p.uses || 0) + ' uses</span>'
           + '<span class="note">' + esc(p.name) + (p.email ? " · " + esc(p.email) : "")
-          + ' · sales found: ' + (p.sales || 0) + '</span>'
-          + '<button class="danger-btn del-cpn-btn" data-sdel-partner="' + esc(p.id) + '" type="button">Remove</button></div>';
+          + ' · bought with code: ' + (p.sales || 0) + '</span>'
+          + '<button class="danger-btn del-cpn-btn" data-sdel-partner="' + esc(p.id) + '" type="button">Remove</button></div>'
+          + '<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#22c55e;border-radius:999px;"></div></div></div>';
       }).join("");
       Array.prototype.forEach.call(box.querySelectorAll("[data-sdel-partner]"), function (b) {
         b.onclick = function () {
