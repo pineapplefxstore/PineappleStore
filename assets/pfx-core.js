@@ -345,7 +345,7 @@
                 + "&txn=" + encodeURIComponent((det && det.id) || orderID)
                 + "&amount=" + encodeURIComponent(amount)
                 + "&email=" + encodeURIComponent(payerEmail);
-              location.href = "success.html?" + q;
+              location.href = "success?" + q;
             }
           });
         },
@@ -467,7 +467,7 @@
     if(e && e.stopPropagation) e.stopPropagation();
     if(!window.PFXAuth.require()){ openAuth("login"); return; }
     if(acctMenu) acctMenu.classList.toggle("open");
-    else location.href = "dashboard.html";
+    else location.href = "dashboard";
   };
   document.addEventListener("click", function(e){
     if(acctMenu && acctMenu.classList.contains("open")) closeMenu();
@@ -505,12 +505,12 @@
     if(!isOwnerNow) isOwnerNow = String(session || "").trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
     var show = !!(admin && isOwnerNow);
     // Never show the shortcut on the admin page itself.
-    try { if(/admin\.html$/.test(location.pathname)) show = false; } catch(e){}
+    try { if(/\/admin$/.test(location.pathname)) show = false; } catch(e){}
     var b = document.getElementById("ownerAdminBtn");
     if(show && !b){
       b = document.createElement("a");
       b.id = "ownerAdminBtn";
-      b.href = "admin.html";
+      b.href = "admin";
       b.textContent = "⚙ Open Admin Panel";
       b.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:9990;background:#feca08;color:#111;font-weight:800;font-size:13.5px;padding:12px 20px;border-radius:999px;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.45);";
       document.body.appendChild(b);

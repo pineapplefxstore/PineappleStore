@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Finding that page… — Pineapple Store</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<link rel="stylesheet" href="./assets/site.css" />
+<script>
+(function(){
+  // Fallback for hosts that don't resolve clean URLs (example: /store)
+  // to files (example: /store.html). GitHub Pages and Vercel already do,
+  // so this page rarely shows — it just forwards and keeps query strings.
+  var pages = ["store", "dashboard", "install", "faq", "admin", "success", "index"];
+  try {
+    var path = location.pathname.replace(/\/+$/, "");
+    var last = path.split("/").pop().toLowerCase();
+    if (pages.indexOf(last) !== -1) {
+      var base = path.slice(0, path.length - last.length);
+      location.replace(base + last + ".html" + (location.search || "") + (location.hash || ""));
+      return;
+    }
+  } catch (e) {}
+  window.__pfxNotFound = true;
+})();
+</script>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="./"><img src="./assets/logo.png" alt="PineappleFX logo" />Pineapple<b>FX</b></a>
+  <div class="links">
+    <a class="nl" href="./">Home</a>
+    <a class="nl" href="store">Store</a>
+    <a class="nl" href="dashboard">My Licenses</a>
+  </div>
+</div></nav>
+<header class="page-hero"><div class="wrap">
+  <h1>That page is missing</h1>
+  <p id="nfMsg">Looking for it… if you stay here, pick a page below.</p>
+  <p style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-pay" href="./">Home</a>
+    <a class="btn btn-ghost" href="store">Store</a>
+    <a class="btn btn-ghost" href="dashboard">My Keys</a>
+  </p>
+</div></header>
+<script>
+(function(){
+  if (!window.__pfxNotFound) {
+    var m = document.getElementById("nfMsg");
+    if (m) m.textContent = "That address did not match a page. Pick one below.";
+  }
+})();
+</script>
+</body>
+</html>

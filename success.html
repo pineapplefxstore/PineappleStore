@@ -57,7 +57,7 @@ footer a{color:var(--accent);font-weight:700;text-decoration:none}
 <body>
 <div class="wrap">
 <nav>
-  <a href="./index.html" style="display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--label);font-weight:800;"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b></a>
+  <a href="./" style="display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--label);font-weight:800;"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b></a>
   <span class="sp"></span>
   <button class="tbtn" id="themeBtn" title="Toggle dark / light"></button>
 </nav>
@@ -87,7 +87,7 @@ footer a{color:var(--accent);font-weight:700;text-decoration:none}
     <div class="check" style="filter:grayscale(1);opacity:.6;">?</div>
     <h1>No order found</h1>
     <p class="sub">This page needs a completed checkout. Head back and buy first.</p>
-    <a class="btn" href="./store.html#pricing">Back to pricing</a>
+    <a class="btn" href="./store#pricing">Back to pricing</a>
   </div>
 </main>
 <footer>Questions? <a href="mailto:pineapplefx.store@gmail.com">pineapplefx.store@gmail.com</a> — include your order ID.</footer>
@@ -173,7 +173,7 @@ footer a{color:var(--accent);font-weight:700;text-decoration:none}
     var back = document.getElementById("sBack");
     if(back) back.onclick = function(){
       var em = document.getElementById("sEmail"), dv = document.getElementById("sDev");
-      var u = "store.html?txn=" + encodeURIComponent(q.txn || q.order || "");
+      var u = "store?txn=" + encodeURIComponent(q.txn || q.order || "");
       if(em && em.value) u += "&email=" + encodeURIComponent(em.value);
       else if(q.email) u += "&email=" + encodeURIComponent(q.email);
       if(dv && dv.value) u += "&device=" + encodeURIComponent(dv.value);

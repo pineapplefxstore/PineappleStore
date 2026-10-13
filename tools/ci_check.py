@@ -42,13 +42,27 @@ def ok(msg):
 
 # ---- 1. required pages & assets -------------------------------------------
 for rel in ('index.html', 'store.html', 'dashboard.html', 'install.html',
-            'faq.html', 'admin.html', 'success.html',
+            'faq.html', 'admin.html', 'success.html', '404.html',
             'assets/site.css', 'assets/premium.css', 'assets/logo.png',
             'assets/pfx-core.js', 'assets/pfx-preview.js',
             'assets/pfx-licensing.js', 'assets/pfx-admin.js',
             'assets/pfx-affiliates.js'):
     (ok('page/asset present: ' + rel) if (SITE / rel).exists()
      else err('missing required file: ' + str(SITE.relative_to(BASE) / rel) if SITE != BASE else rel))
+
+# ---- 1b. clean URLs: no internal page links may end in .html ---------------
+for page in ('index.html', 'store.html', 'dashboard.html', 'install.html',
+             'faq.html', 'admin.html', 'success.html', '404.html'):
+    p = SITE / page
+    if not p.exists():
+        continue
+    t = p.read_text(encoding='utf-8')
+    bad = [m for m in re.findall(r'''(?:href="|location\.href = "|var u = ")([^"]*\.html[^"]*)"''', t)]
+    bad = [b for b in bad if not b.startswith(('http', 'mailto:', '#'))]
+    if bad:
+        err('%s still links to .html URLs (use clean links): %s' % (page, bad[:3]))
+    else:
+        ok(page + ': links are clean (no .html)')
 
 # ---- 2. relative paths only (GitHub Pages serves a /<repo>/ subpath) ------
 for page in ('index.html', 'store.html', 'dashboard.html', 'install.html',
@@ -62,6 +76,15 @@ for page in ('index.html', 'store.html', 'dashboard.html', 'install.html',
         err('%s has root-absolute refs (break under /<repo>/): %s' % (page, bad[:3]))
     else:
         ok(page + ': all refs relative')
+
+# ---- 2b. clean URLs in JS bundles too --------------------------------------
+for f in sorted((SITE / 'assets').glob('pfx-*.js')):
+    t = f.read_text(encoding='utf-8')
+    bad = [m for m in re.findall(r'''"((?:admin|store|dashboard|install|faq|success)\.html[^"]*)"''', t)]
+    if bad:
+        err('%s still links to .html URLs (use clean links): %s' % (f.name, bad[:3]))
+    else:
+        ok(f.name + ': links are clean (no .html)')
 
 # ---- 3. JS syntax (node --check) ------------------------------------------
 node = shutil.which('node')

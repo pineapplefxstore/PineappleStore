@@ -206,7 +206,7 @@ window.PineappleFXLic = (function(){
         document.getElementById("licDevErr").innerHTML = "This account's machine slot"
           + (slotHasExtra(acct) ? "s are" : " is")
           + " already filled — each key unlocks exactly 1 PC. "
-          + '<a href="dashboard.html" style="color:var(--accent);font-weight:700;">Get the one-time $7.90 extra-machine deal</a> in your dashboard.';
+          + '<a href="dashboard" style="color:var(--accent);font-weight:700;">Get the one-time $7.90 extra-machine deal</a> in your dashboard.';
         return;
       }
       mintBtn.style.display = "none";
