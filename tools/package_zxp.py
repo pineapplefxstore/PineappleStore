@@ -4,7 +4,7 @@ Usage:
   py tools/package_zxp.py [--out PineappleFX.zxp]
 
 Writes PineappleFX.zxp at the repo root AND stages a copy at
-site/downloads/PineappleFX.zxp for website download buttons.
+downloads/PineappleFX.zxp (the website download buttons).
 
 Layout inside the zip (extension root):
   CSXS/manifest.xml, dist/index.html, dist/logo.png,
@@ -54,7 +54,7 @@ def main():
         assert '/*PFX-SEALED*/' in gate, 'gate NOT sealed — run tools/protect_gate.py first!'
         man = z.read('CSXS/manifest.xml').decode('utf-8', errors='replace')
         assert 'com.pineapplestore.pineapplefx' in man, 'manifest bundle id wrong!'
-    staged = BASE / 'site' / 'downloads' / 'PineappleFX.zxp'
+    staged = BASE / 'downloads' / 'PineappleFX.zxp'
     staged.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(out, staged)
     print('WROTE %s (%.2f MB) + staged %s' % (out, out.stat().st_size / 1e6, staged))

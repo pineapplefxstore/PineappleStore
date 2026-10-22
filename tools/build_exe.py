@@ -7,7 +7,7 @@ Pipeline:
   1. Stages payload/ = the 7 sealed extension files + meta.json
      (FNV SECRET from tools/mint_key.py + verify URL + version).
   2. Runs PyInstaller --onefile --noconsole (tkinter GUI bundled).
-  3. Copies dist/PineappleFX-Installer.exe to site/downloads/.
+  3. Copies dist/PineappleFX-Installer.exe to downloads/.
 
 Requires: pip install pyinstaller. tkinter ships with CPython on Windows.
 For stronger binary protection, post-process with PyArmor/Nuitka before
@@ -88,7 +88,7 @@ def main():
     if not exe.is_file():
         print('refusing: exe not produced')
         sys.exit(1)
-    dest = BASE / 'site' / 'downloads' / 'PineappleFX-Installer.exe'
+    dest = BASE / 'downloads' / 'PineappleFX-Installer.exe'
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(exe, dest)
     print('WROTE %s (%.1f MB)' % (dest, dest.stat().st_size / 1e6))
