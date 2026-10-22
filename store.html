@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Store — PineappleFX by Pineapple Store</title>
 <meta name="description" content="Buy PineappleFX: $20 launch special (regular $30). Instant license keys, coupons, one license per machine." />
-<meta name="theme-color" content="#f5c400" />
+<meta name="theme-color" content="#000000" />
 <link rel="icon" type="image/png" href="./assets/logo.png" />
 <link rel="stylesheet" href="./assets/site.css" />
 <link rel="stylesheet" href="./assets/premium.css" />
@@ -47,14 +47,14 @@
     <div id="ppPrice" style="min-width:230px;max-width:320px;"></div>
   </div>
   <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-    <input id="couponInput" placeholder="Coupon code (optional)" spellcheck="false" autocomplete="off" style="background:var(--surface);border:1px solid var(--hairline);border-radius:999px;color:var(--label);padding:11px 18px;font-size:14px;min-width:220px;outline:none;" />
+    <input id="couponInput" placeholder="Coupon code (optional)" spellcheck="false" autocomplete="off" style="background:var(--grouped);border:none;border-radius:980px;color:var(--label);padding:12px 18px;font-size:14px;min-width:220px;outline:none;font-family:inherit;" />
     <button id="couponApply" class="btn btn-ghost" style="padding:11px 24px;">Apply</button>
   </div>
   <p id="couponMsg" class="sec-sub" style="margin:8px 0 0;min-height:20px;"></p>
   <div class="steps" style="margin-top:34px;text-align:left">
-    <div class="step"><b>1. Log in &amp; pay</b><p>Make your free Pineapple Store account, then pay with the PayPal button above — it opens right here, no extra pages.</p></div>
-    <div class="step"><b>2. Get your key right away</b><p>As soon as payment is done, your personal <code>PFX2-...</code> key shows on this page with a copy button. A backup copy + installer also go to your email.</p></div>
-    <div class="step"><b>3. Install &amp; open</b><p>Install the file, paste your key into the PineappleFX panel in After Effects. It opens on your computer right away, even offline.</p></div>
+    <div class="step"><b>Log in &amp; pay</b><p>Make your free Pineapple Store account, then pay with the PayPal button above — it opens right here, no extra pages.</p></div>
+    <div class="step"><b>Get your key right away</b><p>As soon as payment is done, your personal <code>PFX2-...</code> key shows on this page with a copy button. A backup copy + installer also go to your email.</p></div>
+    <div class="step"><b>Install &amp; open</b><p>Install the file, paste your key into the PineappleFX panel in After Effects. It opens on your computer right away, even offline.</p></div>
   </div>
 </div></section>
 
@@ -75,7 +75,7 @@
     <b>Have an owner / promo coupon?</b>
     <p style="font-size:13px;color:var(--label-2);">Apply it in Pricing above, then enter your Machine ID to activate your key — no payment needed.</p>
     <label for="claimDev" style="font-size:13px;font-weight:700;">Enter Machine ID to activate key
-      <input id="claimDev" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder="ABCDEFGH" maxlength="8" style="display:block;width:100%;margin-top:5px;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:10px;font-size:14px;font-family:monospace;text-transform:uppercase;letter-spacing:1px;outline:none;" />
+      <input id="claimDev" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder="ABCDEFGH" maxlength="8" style="display:block;width:100%;margin-top:6px;background:var(--grouped);border:none;border-radius:12px;color:var(--label);padding:12px 14px;font-size:15px;font-family:inherit;text-transform:uppercase;letter-spacing:1px;outline:none;" />
       <span class="lic-hint" id="claimHint">The 8-character ID shown on the locked panel (click it there to copy).</span>
     </label>
     <button id="claimBtn" class="btn btn-pay lic-btn" type="button" style="width:100%;">Generate Key</button>

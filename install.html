@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Install — PineappleFX by Pineapple Store</title>
 <meta name="description" content="Install PineappleFX in five minutes: debug mode, .zxp install, Machine ID, activation." />
-<meta name="theme-color" content="#f5c400" />
+<meta name="theme-color" content="#000000" />
 <link rel="icon" type="image/png" href="./assets/logo.png" />
 <link rel="stylesheet" href="./assets/site.css" />
 <link rel="stylesheet" href="./assets/premium.css" />
@@ -49,10 +49,10 @@
     </div>
   </div>
   <div class="steps" style="text-align:left">
-    <div class="step"><b>1. Enable debug mode</b><p>Run once as admin: <code>reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f</code></p></div>
-    <div class="step"><b>2. Install the .zxp</b><p>Open it with an extension manager, or copy the folder to <code>%APPDATA%\Adobe\CEP\extensions\</code>. <b>Use the personal .zxp from your purchase email</b> (it comes pre-activated for your machine)</p></div>
-    <div class="step"><b>3. Copy your Machine ID</b><p>Restart After Effects, open Window - Extensions - PineappleFX. Click the Machine ID to copy it.</p></div>
-    <div class="step"><b>4. Activate</b><p>Paste the key from your email into the panel. Done - works offline from here on.</p></div>
+    <div class="step"><b>Enable debug mode</b><p>Run once as admin: <code>reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f</code></p></div>
+    <div class="step"><b>Install the .zxp</b><p>Open it with an extension manager, or copy the folder to <code>%APPDATA%\Adobe\CEP\extensions\</code>. <b>Use the personal .zxp from your purchase email</b> (it comes pre-activated for your machine)</p></div>
+    <div class="step"><b>Copy your Machine ID</b><p>Restart After Effects, open Window - Extensions - PineappleFX. Click the Machine ID to copy it.</p></div>
+    <div class="step"><b>Activate</b><p>Paste the key from your email into the panel. Done - works offline from here on.</p></div>
   </div>
   <div class="install-note"><b>macOS paths.</b> Copy the extension folder to <code>~/Library/Application Support/Adobe/CEP/extensions/</code>, then restart After Effects. Debug mode is a Windows registry step — macOS needs only the extension manager install.</div>
   <div class="install-note"><b>Panel doesn't show up?</b> Confirm PlayerDebugMode reads <code>1</code> (<code>reg query HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode</code>), that you restarted After Effects after installing, and that your version is 22.0 or newer.</div>
