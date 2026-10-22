@@ -61,7 +61,7 @@ backend with `window.PFX_API_BASE` if needed.
 - `index.html` — homepage: hero, features, live panel preview, CTA
 - `store.html` — pricing, PayPal checkout, coupons, license generator
 - `dashboard.html` — My Keys: keys, computers, $7.90 extra-computer deal
-- `install.html` — install guide + help notes
+- `downloads/PineappleFX.zxp` - demo build for the site download button
 - `faq.html` — Help + answers
 - `admin.html` — admin panel (owner login only) + Partner program
 - `assets/site.css` — shared theme + components
