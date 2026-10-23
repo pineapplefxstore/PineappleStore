@@ -1,0 +1,4 @@
+{
+  "_note": "Public discount codes only. Percent-off entries live here so buyers can redeem them on the static site. NEVER put 'free' (key-minting) codes in this file - it is served to everyone. Add codes via the admin panel's 'Publish codes to website' button, then commit.",
+  "PAFX-BRY4O-GA4-ARD": { "kind": "percent", "pct": 25 }
+}

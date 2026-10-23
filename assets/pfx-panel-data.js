@@ -25,10 +25,6 @@ window.PFX_PANEL = {
    "label": "Styles"
   },
   {
-   "id": "expressions",
-   "label": "Expressions"
-  },
-  {
    "id": "numbers",
    "label": "Numbers"
   },
@@ -569,7 +565,7 @@ window.PFX_PANEL = {
       "default": 1
      }
     ],
-    "generateSrc": "e=>`// PineappleFX ·Wiggle\r\nfreq = ${V(O(e,\"freq\"))};\r\namp = ${V(O(e,\"amp\"))};\r\noctaves = ${V(O(e,\"octaves\"))};\r\nwiggle(freq, amp, octaves);`"
+    "generateSrc": "e=>`// PineappleFX ·Wiggle\nfreq = ${V(O(e,\"freq\"))};\namp = ${V(O(e,\"amp\"))};\noctaves = ${V(O(e,\"octaves\"))};\nwiggle(freq, amp, octaves);`"
    },
    {
     "id": "bounce",
@@ -597,7 +593,7 @@ window.PFX_PANEL = {
       "default": 7
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Bounce\r\nfreq = ${V(O(e,\"freq\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nn = 0;\r\nif (numKeys > 0) {\r\n    n = nearestKey(time).index;\r\n    if (key(n).time > time) n--;\r\n}\r\nresult = value;\r\nif (n >= 1 && n < numKeys) {\r\n    dur = key(n + 1).time - key(n).time;\r\n    if (dur > 0) {\r\n        t01 = (time - key(n).time) / dur;\r\n        p = 1 - Math.exp(-decay * t01) * Math.cos(freq * t01 * 2 * Math.PI);\r\n        result = key(n).value + (key(n + 1).value - key(n).value) * p;\r\n    }\r\n}\r\nresult;`"
+    "generateSrc": "e=>`// PineappleFX · Bounce\nfreq = ${V(O(e,\"freq\"))};\ndecay = ${V(O(e,\"decay\"))};\nn = 0;\nif (numKeys > 0) {\n    n = nearestKey(time).index;\n    if (key(n).time > time) n--;\n}\nresult = value;\nif (n >= 1 && n < numKeys) {\n    dur = key(n + 1).time - key(n).time;\n    if (dur > 0) {\n        t01 = (time - key(n).time) / dur;\n        p = 1 - Math.exp(-decay * t01) * Math.cos(freq * t01 * 2 * Math.PI);\n        result = key(n).value + (key(n + 1).value - key(n).value) * p;\n    }\n}\nresult;`"
    },
    {
     "id": "bounce-out",
@@ -635,7 +631,7 @@ window.PFX_PANEL = {
       "default": 5
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Bounce Out\r\namp = ${V(O(e,\"amp\"))};\r\nfreq = ${V(O(e,\"freq\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nn = 0;\r\nif (numKeys > 0) {\r\n    n = nearestKey(time).index;\r\n    if (key(n).time > time) n--;\r\n}\r\nif (n >= 2) {\r\n    t = time - key(n).time;\r\n    delta = key(n).value - key(n - 1).value;\r\n    value + delta * amp * Math.sin(freq * t * 2 * Math.PI) / Math.exp(decay * t);\r\n} else {\r\n    value;\r\n}`"
+    "generateSrc": "e=>`// PineappleFX · Bounce Out\namp = ${V(O(e,\"amp\"))};\nfreq = ${V(O(e,\"freq\"))};\ndecay = ${V(O(e,\"decay\"))};\nn = 0;\nif (numKeys > 0) {\n    n = nearestKey(time).index;\n    if (key(n).time > time) n--;\n}\nif (n >= 2) {\n    t = time - key(n).time;\n    delta = key(n).value - key(n - 1).value;\n    value + delta * amp * Math.sin(freq * t * 2 * Math.PI) / Math.exp(decay * t);\n} else {\n    value;\n}`"
    },
    {
     "id": "loop-out",
@@ -678,7 +674,7 @@ window.PFX_PANEL = {
       "default": 0
      }
     ],
-    "generateSrc": "e=>{const t=uc(e,\"mode\"),n=O(e,\"keys\");return t===\"continue\"?`// PineappleFX ·Loop Out (continue)\r\nloopOut(\"continue\");`:`// PineappleFX ·Loop Out\r\nloopOut(\"${t}\", ${V(n)});`}"
+    "generateSrc": "e=>{const t=uc(e,\"mode\"),n=O(e,\"keys\");return t===\"continue\"?`// PineappleFX ·Loop Out (continue)\nloopOut(\"continue\");`:`// PineappleFX ·Loop Out\nloopOut(\"${t}\", ${V(n)});`}"
    },
    {
     "id": "random-seed",
@@ -716,7 +712,7 @@ window.PFX_PANEL = {
       "default": 7
      }
     ],
-    "generateSrc": "e=>`// PineappleFX ·Random Seed\r\nseedRandom(index * ${V(O(e,\"seedScale\"))}, true);\r\nwiggle(${V(O(e,\"freq\"))}, ${V(O(e,\"amp\"))});`"
+    "generateSrc": "e=>`// PineappleFX ·Random Seed\nseedRandom(index * ${V(O(e,\"seedScale\"))}, true);\nwiggle(${V(O(e,\"freq\"))}, ${V(O(e,\"amp\"))});`"
    },
    {
     "id": "sine-wave",
@@ -755,7 +751,7 @@ window.PFX_PANEL = {
       "unit": "deg"
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Sine Wave\r\nfreq = ${V(O(e,\"freq\"))};\r\namp = ${V(O(e,\"amp\"))};\r\nphase = ${V(O(e,\"phase\"))} * Math.PI / 180;\r\nvalue + Math.sin(time * 2 * Math.PI * freq + phase) * amp;`"
+    "generateSrc": "e=>`// PineappleFX · Sine Wave\nfreq = ${V(O(e,\"freq\"))};\namp = ${V(O(e,\"amp\"))};\nphase = ${V(O(e,\"phase\"))} * Math.PI / 180;\nvalue + Math.sin(time * 2 * Math.PI * freq + phase) * amp;`"
    },
    {
     "id": "hover-float",
@@ -788,7 +784,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Position"
     ],
-    "generateSrc": "e=>`// PineappleFX · Hover Float\r\namp = ${V(O(e,\"amp\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\nt = time * 2 * Math.PI * speed;\r\n[value[0] + Math.sin(t * 0.7) * amp * 0.35,\r\n value[1] + Math.sin(t) * amp];`"
+    "generateSrc": "e=>`// PineappleFX · Hover Float\namp = ${V(O(e,\"amp\"))};\nspeed = ${V(O(e,\"speed\"))};\nt = time * 2 * Math.PI * speed;\n[value[0] + Math.sin(t * 0.7) * amp * 0.35,\n value[1] + Math.sin(t) * amp];`"
    },
    {
     "id": "throw",
@@ -830,7 +826,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Position"
     ],
-    "generateSrc": "e=>`// PineappleFX · Throw\r\nvx = ${V(O(e,\"vx\"))};\r\nvy = ${V(O(e,\"vy\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nt = Math.max(0, time - inPoint);\r\nfactor = (1 - Math.exp(-decay * t)) / decay;\r\n[value[0] + vx * factor, value[1] + vy * factor];`"
+    "generateSrc": "e=>`// PineappleFX · Throw\nvx = ${V(O(e,\"vx\"))};\nvy = ${V(O(e,\"vy\"))};\ndecay = ${V(O(e,\"decay\"))};\nt = Math.max(0, time - inPoint);\nfactor = (1 - Math.exp(-decay * t)) / decay;\n[value[0] + vx * factor, value[1] + vy * factor];`"
    },
    {
     "id": "breathe",
@@ -863,7 +859,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Scale"
     ],
-    "generateSrc": "e=>`// PineappleFX: Breathe\r\namp = ${V(O(e,\"amp\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\nk = 1 + (amp / 100) * Math.sin(time * 2 * Math.PI * speed);\r\nvalue * k;`"
+    "generateSrc": "e=>`// PineappleFX: Breathe\namp = ${V(O(e,\"amp\"))};\nspeed = ${V(O(e,\"speed\"))};\nk = 1 + (amp / 100) * Math.sin(time * 2 * Math.PI * speed);\nvalue * k;`"
    },
    {
     "id": "auto-fade",
@@ -898,7 +894,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Opacity"
     ],
-    "generateSrc": "e=>`// PineappleFX: Auto-Fade\r\nfadeIn = ${V(O(e,\"fadeIn\"))};\r\nfadeOut = ${V(O(e,\"fadeOut\"))};\r\nmax = value;\r\ntIn = fadeIn > 0 ? linear(time, inPoint, inPoint + fadeIn, 0, max) : max;\r\ntOut = fadeOut > 0 ? linear(time, outPoint - fadeOut, outPoint, max, 0) : max;\r\nMath.min(tIn, tOut);`"
+    "generateSrc": "e=>`// PineappleFX: Auto-Fade\nfadeIn = ${V(O(e,\"fadeIn\"))};\nfadeOut = ${V(O(e,\"fadeOut\"))};\nmax = value;\ntIn = fadeIn > 0 ? linear(time, inPoint, inPoint + fadeIn, 0, max) : max;\ntOut = fadeOut > 0 ? linear(time, outPoint - fadeOut, outPoint, max, 0) : max;\nMath.min(tIn, tOut);`"
    },
    {
     "id": "loop-in",
@@ -941,7 +937,7 @@ window.PFX_PANEL = {
       "default": 0
      }
     ],
-    "generateSrc": "e=>{const t=uc(e,\"mode\"),n=O(e,\"keys\");return t===\"continue\"?`// PineappleFX · Loop In (continue)\r\nloopIn(\"continue\");`:`// PineappleFX · Loop In\r\nloopIn(\"${t}\", ${V(n)});`}"
+    "generateSrc": "e=>{const t=uc(e,\"mode\"),n=O(e,\"keys\");return t===\"continue\"?`// PineappleFX · Loop In (continue)\nloopIn(\"continue\");`:`// PineappleFX · Loop In\nloopIn(\"${t}\", ${V(n)});`}"
    },
    {
     "id": "jitter",
@@ -980,7 +976,7 @@ window.PFX_PANEL = {
       "unit": "Hz"
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Jitter\r\nseedRandom(index, true);\r\nposterizeTime(${V(O(e,\"rate\"))});\r\nwiggle(${V(O(e,\"freq\"))}, ${V(O(e,\"amp\"))});`"
+    "generateSrc": "e=>`// PineappleFX · Jitter\nseedRandom(index, true);\nposterizeTime(${V(O(e,\"rate\"))});\nwiggle(${V(O(e,\"freq\"))}, ${V(O(e,\"amp\"))});`"
    },
    {
     "id": "smooth",
@@ -1010,7 +1006,7 @@ window.PFX_PANEL = {
       "default": 6
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Smooth\r\nsmooth(${V(O(e,\"width\"))}, ${V(O(e,\"samples\"))});`"
+    "generateSrc": "e=>`// PineappleFX · Smooth\nsmooth(${V(O(e,\"width\"))}, ${V(O(e,\"samples\"))});`"
    },
    {
     "id": "orbit",
@@ -1053,7 +1049,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Position"
     ],
-    "generateSrc": "e=>`// PineappleFX · Orbit\r\nr = ${V(O(e,\"radius\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\nph = ${V(O(e,\"phase\"))} * Math.PI / 180;\r\na = time * 2 * Math.PI * speed + ph;\r\n[value[0] + Math.cos(a) * r, value[1] + Math.sin(a) * r];`"
+    "generateSrc": "e=>`// PineappleFX · Orbit\nr = ${V(O(e,\"radius\"))};\nspeed = ${V(O(e,\"speed\"))};\nph = ${V(O(e,\"phase\"))} * Math.PI / 180;\na = time * 2 * Math.PI * speed + ph;\n[value[0] + Math.cos(a) * r, value[1] + Math.sin(a) * r];`"
    },
    {
     "id": "sway",
@@ -1086,7 +1082,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Rotate Z"
     ],
-    "generateSrc": "e=>`// PineappleFX · Sway\r\namp = ${V(O(e,\"angle\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\nvalue + Math.sin(time * 2 * Math.PI * speed) * amp;`"
+    "generateSrc": "e=>`// PineappleFX · Sway\namp = ${V(O(e,\"angle\"))};\nspeed = ${V(O(e,\"speed\"))};\nvalue + Math.sin(time * 2 * Math.PI * speed) * amp;`"
    },
    {
     "id": "flicker",
@@ -1119,7 +1115,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Opacity"
     ],
-    "generateSrc": "e=>`// PineappleFX: Flicker\r\nrate = ${V(O(e,\"rate\"))};\r\nminV = ${V(O(e,\"min\"))};\r\nseedRandom(index, true);\r\nposterizeTime(rate);\r\nr = random(minV, 100);\r\nvalue * (r / 100);`"
+    "generateSrc": "e=>`// PineappleFX: Flicker\nrate = ${V(O(e,\"rate\"))};\nminV = ${V(O(e,\"min\"))};\nseedRandom(index, true);\nposterizeTime(rate);\nr = random(minV, 100);\nvalue * (r / 100);`"
    },
    {
     "id": "blink",
@@ -1152,7 +1148,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Opacity"
     ],
-    "generateSrc": "e=>`// PineappleFX · Blink\r\nrate = ${V(O(e,\"rate\"))};\r\nduty = ${V(O(e,\"duty\"))};\r\n((time * rate) % 1) < duty / 100 ? value : 0;`"
+    "generateSrc": "e=>`// PineappleFX · Blink\nrate = ${V(O(e,\"rate\"))};\nduty = ${V(O(e,\"duty\"))};\n((time * rate) % 1) < duty / 100 ? value : 0;`"
    },
    {
     "id": "fade-pulse",
@@ -1185,7 +1181,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Opacity"
     ],
-    "generateSrc": "e=>`// PineappleFX · Fade Pulse\r\nspeed = ${V(O(e,\"speed\"))};\r\nminV = ${V(O(e,\"min\"))};\r\nk = 0.5 + 0.5 * Math.sin(time * 2 * Math.PI * speed);\r\nminV + (value - minV) * k;`"
+    "generateSrc": "e=>`// PineappleFX · Fade Pulse\nspeed = ${V(O(e,\"speed\"))};\nminV = ${V(O(e,\"min\"))};\nk = 0.5 + 0.5 * Math.sin(time * 2 * Math.PI * speed);\nminV + (value - minV) * k;`"
    },
    {
     "id": "settle",
@@ -1223,7 +1219,7 @@ window.PFX_PANEL = {
       "default": 4
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Settle\r\nfreq = ${V(O(e,\"freq\"))};\r\namp = ${V(O(e,\"amp\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nt = time - inPoint;\r\nvalue + (wiggle(freq, amp) - value) * Math.exp(-decay * t);`"
+    "generateSrc": "e=>`// PineappleFX · Settle\nfreq = ${V(O(e,\"freq\"))};\namp = ${V(O(e,\"amp\"))};\ndecay = ${V(O(e,\"decay\"))};\nt = time - inPoint;\nvalue + (wiggle(freq, amp) - value) * Math.exp(-decay * t);`"
    },
    {
     "id": "time-echo",
@@ -1244,7 +1240,7 @@ window.PFX_PANEL = {
       "decimals": 2
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Time Echo\r\ndelay = ${V(O(e,\"delay\"))};\r\nvalueAtTime(time - delay);`"
+    "generateSrc": "e=>`// PineappleFX · Time Echo\ndelay = ${V(O(e,\"delay\"))};\nvalueAtTime(time - delay);`"
    },
    {
     "id": "cascade",
@@ -1265,7 +1261,7 @@ window.PFX_PANEL = {
       "decimals": 2
      }
     ],
-    "generateSrc": "e=>`// PineappleFX · Cascade\r\noffset = ${V(O(e,\"offset\"))};\r\nvalueAtTime(time - (index - 1) * offset);`"
+    "generateSrc": "e=>`// PineappleFX · Cascade\noffset = ${V(O(e,\"offset\"))};\nvalueAtTime(time - (index - 1) * offset);`"
    },
    {
     "id": "random-rotation",
@@ -1288,7 +1284,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Rotate Z"
     ],
-    "generateSrc": "e=>`// PineappleFX · Random Tilt\r\nseedRandom(index, true);\r\namp = ${V(O(e,\"amp\"))};\r\nvalue + random(-amp, amp);`"
+    "generateSrc": "e=>`// PineappleFX · Random Tilt\nseedRandom(index, true);\namp = ${V(O(e,\"amp\"))};\nvalue + random(-amp, amp);`"
    },
    {
     "id": "pendulum",
@@ -1330,7 +1326,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Rotate Z"
     ],
-    "generateSrc": "e=>`// PineappleFX · Pendulum\r\namp = ${V(O(e,\"angle\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nt = time - inPoint;\r\nvalue + Math.sin(t * 2 * Math.PI * speed) * amp * Math.exp(-decay * t);`"
+    "generateSrc": "e=>`// PineappleFX · Pendulum\namp = ${V(O(e,\"angle\"))};\nspeed = ${V(O(e,\"speed\"))};\ndecay = ${V(O(e,\"decay\"))};\nt = time - inPoint;\nvalue + Math.sin(t * 2 * Math.PI * speed) * amp * Math.exp(-decay * t);`"
    },
    {
     "id": "scale-pop",
@@ -1371,7 +1367,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Scale"
     ],
-    "generateSrc": "e=>`// PineappleFX · Scale Pop\r\nfrom = ${V(O(e,\"from\"))} / 100;\r\nfreq = ${V(O(e,\"freq\"))};\r\ndecay = ${V(O(e,\"decay\"))};\r\nt = time - inPoint;\r\nif (t < 0) {\r\n    value * from;\r\n} else {\r\n    p = 1 - Math.exp(-decay * t) * Math.cos(freq * t * 2 * Math.PI);\r\n    value * (from + (1 - from) * p);\r\n}`"
+    "generateSrc": "e=>`// PineappleFX · Scale Pop\nfrom = ${V(O(e,\"from\"))} / 100;\nfreq = ${V(O(e,\"freq\"))};\ndecay = ${V(O(e,\"decay\"))};\nt = time - inPoint;\nif (t < 0) {\n    value * from;\n} else {\n    p = 1 - Math.exp(-decay * t) * Math.cos(freq * t * 2 * Math.PI);\n    value * (from + (1 - from) * p);\n}`"
    },
    {
     "id": "wander",
@@ -1404,7 +1400,7 @@ window.PFX_PANEL = {
     "suggestedTargets": [
      "ADBE Position"
     ],
-    "generateSrc": "e=>`// PineappleFX · Wander\r\namp = ${V(O(e,\"amount\"))};\r\nspeed = ${V(O(e,\"speed\"))};\r\nt = time * 2 * Math.PI * speed;\r\n[value[0] + Math.sin(t * 0.6) * amp, value[1] + Math.cos(t * 0.37) * amp * 0.7];`"
+    "generateSrc": "e=>`// PineappleFX · Wander\namp = ${V(O(e,\"amount\"))};\nspeed = ${V(O(e,\"speed\"))};\nt = time * 2 * Math.PI * speed;\n[value[0] + Math.sin(t * 0.6) * amp, value[1] + Math.cos(t * 0.37) * amp * 0.7];`"
    }
   ],
   "text": [

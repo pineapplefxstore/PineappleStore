@@ -129,6 +129,36 @@
   };
   function couponGet(){ try { return localStorage.getItem("pineapplefx-coupon") || ""; } catch(e){ return ""; } }
   function couponSet(c){ try { localStorage.setItem("pineapplefx-coupon", c); } catch(e){} }
+  /* Static registry fallback (coupons.json, served with the site). GitHub
+     Pages has no backend, so /api/coupons is inert there and every admin-made
+     code would read "That code did not work." The file is PUBLIC: it may only
+     carry percent-off codes — 'free' (key-minting) codes must never be in it,
+     and this loader refuses them anyway as defence in depth. */
+  function couponLookupStatic(code){
+    if(!window.fetch) return Promise.resolve(null);
+    var done = false;
+    /* /store resolves ./coupons.json to /coupons.json; /store/ would resolve
+       it to /store/coupons.json — try the root path as a fallback. */
+    var p = fetch("./coupons.json", { cache: "no-cache" })
+      .then(function(r){ return r.ok ? r.json() : fetch("/coupons.json", { cache: "no-cache" }).then(function(r2){ return r2.ok ? r2.json() : null; }); })
+      .then(function(j){ done = true; return j; })
+      .catch(function(){ done = true; return null; });
+    var timeout = new Promise(function(res){ setTimeout(function(){ if(!done) res(null); }, 3000); });
+    return Promise.race([p, timeout]).then(function(map){
+      if(!map || typeof map !== "object") return null;
+      var up = String(code || "").trim().toUpperCase(), hit = null;
+      Object.keys(map).forEach(function(k){
+        if(k.charAt(0) === "_") return; // skip "_note" etc.
+        if(k.toUpperCase() === up) hit = k;
+      });
+      var d = hit ? map[hit] : null;
+      if(!d || d.kind !== "percent") return null; // percent-only, always
+      var s = storeCoupons();
+      s[hit] = { kind: "percent", pct: Math.min(99, Math.max(1, +d.pct || 0)), note: String(d.note || "").slice(0, 60), maxUses: d.maxUses == null ? null : d.maxUses, uses: d.uses || 0, remote: true };
+      lsSet("pfx-coupons", s);
+      return hit;
+    });
+  }
   /* Server lookup. Admin-created codes live in the server DB, so a buyer's
      browser cannot know them from localStorage alone — without this every
      admin-made code reads "That code did not work." The result is cached
@@ -441,10 +471,13 @@
     }
     if(def && couponUsable(v)){ accept(v); return; }
     if(def && !couponUsable(v)){ msg.style.color = "#e5484d"; msg.textContent = "That code is fully redeemed."; return; }
-    /* not in this browser — ask the server before giving up */
+    /* not in this browser — ask the server, then the published registry */
     msg.style.color = "var(--label-2)"; msg.textContent = "Checking code\u2026";
     couponApplyBtn.disabled = true;
     couponLookupRemote(v).then(function(hit){
+      if(hit) return hit;
+      return couponLookupStatic(v);
+    }).then(function(hit){
       couponApplyBtn.disabled = false;
       if(hit){ accept(hit); return; }
       msg.style.color = "#e5484d";

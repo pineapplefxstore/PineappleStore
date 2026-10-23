@@ -454,7 +454,7 @@
       /* Per-preset demo copy. Showing the same word for all 25 effects makes
          the previews look dead — each one now demos copy that suits it. */
       var TEXT_DEMOS = {
-        "hero-reveal": "PineappleFX", "slide-up": "PineappleFX", "slide": "PineappleFX",
+        "hero-reveal": "PineappleFX", "slide-up": "Rising", "slide": "Sliding in",
         "scale-bounce": "Boom.", "color-scale": "Colorful", "skew-color": "Skewed",
         "word-stagger": "Word by word", "letter-stagger": "Letter by letter",
         "word-bounce": "Bouncy words", "burst": "Burst", "typewriter": "Typing...",

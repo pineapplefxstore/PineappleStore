@@ -6,6 +6,7 @@ errors, broken gate/seal in dist or the staged .zxp, wrong manifest bundle
 id, or an unconfigured production VERIFY_URL (warning only — set
 PFX_VERIFY_URL env to silence when the API host is known).
 """
+import json
 import pathlib
 import re
 import shutil
@@ -192,6 +193,23 @@ for rel in ('vercel.json', 'netlify.toml', 'site/_redirects'):
     if (BASE / rel).exists():
         warn('server-only config present (%s) — harmless on Pages, ensure it does not shadow static routes' % rel)
 ok('deploy-config scan done')
+
+# ---- 10. public coupon registry must never carry key-minting codes --------
+# coupons.json is served to every visitor (static-store fallback lookup).
+# A "free" code in it would hand out working keys to anyone who fetches it.coupons_file = BASE / 'coupons.json'
+if coupons_file.exists():
+    try:
+        reg = json.loads(coupons_file.read_text(encoding='utf-8'))
+        bad = [k for k, v in reg.items()
+               if not k.startswith('_') and (not isinstance(v, dict) or v.get('kind') != 'percent'
+                                             or not (1 <= int(v.get('pct') or 0) <= 99))]
+        if bad:
+            err('coupons.json contains non-percent entries (FREE codes must stay private): ' + ', '.join(bad))
+        else:
+            ok('coupons.json public registry clean (%d code(s), percent-only)'
+               % len([k for k in reg if not k.startswith('_')]))
+    except (ValueError, TypeError) as e:
+        err('coupons.json is not valid JSON: %s' % e)
 
 print('\n%d error(s), %d warning(s)' % (len(ERRORS), len(WARNS)))
 sys.exit(1 if ERRORS else 0)

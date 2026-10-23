@@ -742,6 +742,38 @@
     };
   }
 
+  /* Publish percent-off codes as a static coupons.json the store site can
+     validate against without a backend (GitHub Pages). Free codes are
+     deliberately excluded — this file is served to every visitor. */
+  var cpPublish = document.getElementById("cpPublish");
+  if(cpPublish){
+    cpPublish.onclick = function(){
+      var err = document.getElementById("cpErr");
+      err.textContent = "";
+      if(!isAdmin()){ err.textContent = "Admin only."; return; }
+      var all = window.PFXCoupons.all(), out = {}, n = 0;
+      Object.keys(all).forEach(function(k){
+        var d = all[k];
+        if(d.kind !== "percent") return; // percent-only, always
+        out[k] = { kind: "percent", pct: Math.min(99, Math.max(1, +d.pct || 0)) };
+        if(d.note) out[k].note = String(d.note).slice(0, 60);
+        if(d.maxUses != null) out[k].maxUses = d.maxUses;
+        n++;
+      });
+      var body = {
+        _note: "Public discount codes only. Percent-off entries live here so buyers can redeem them on the static site. NEVER put 'free' (key-minting) codes in this file - it is served to everyone. Add codes via the admin panel's 'Publish codes to website' button, then commit."
+      };
+      Object.keys(out).forEach(function(k){ body[k] = out[k]; });
+      var blob = new Blob([JSON.stringify(body, null, 2) + "\n"], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "coupons.json";
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 500);
+      showToast(n + (n === 1 ? " code published" : " codes published"));
+    };
+  }
+
   /* ---- Make a key by hand (backup tool) ----
      Mints a working, panel-valid key from the buyer's Machine ID alone.
      Server when connected (so it lands in the shared DB and audit log),
