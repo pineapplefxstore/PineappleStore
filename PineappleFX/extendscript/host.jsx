@@ -43,12 +43,209 @@
         return null;
     }
 
+    // --- JSON (self-contained) -------------------------------------------
+    // Two problems forced this: ExtendScript had no JSON at all before AE
+    // 2026, and AE 2026's built-in JSON global is BROKEN for objects - it
+    // drops keys, string values and closing braces, so
+    // JSON.stringify({a:"b"}) returns "{: }". Every {ok:true,...} reply then
+    // failed JSON.parse() on the panel side and Direct mode reported
+    // "After Effects ran but the PineappleFX engine did not load."
+    // Ship our own implementation; ok()/err() always use it, and the global
+    // JSON is replaced as well whenever the native one is missing or wrong.
+    var pfxJSON = (function () {
+        function quote(s) {
+            var out = '"';
+            for (var i = 0; i < s.length; i++) {
+                var c = s.charAt(i);
+                var code = s.charCodeAt(i);
+                if (c === '"') out += '\\"';
+                else if (c === '\\') out += '\\\\';
+                else if (c === '\b') out += '\\b';
+                else if (c === '\f') out += '\\f';
+                else if (c === '\n') out += '\\n';
+                else if (c === '\r') out += '\\r';
+                else if (c === '\t') out += '\\t';
+                else if (code < 32 || code === 0x2028 || code === 0x2029) {
+                    var hex = code.toString(16);
+                    while (hex.length < 4) hex = '0' + hex;
+                    out += '\\u' + hex;
+                } else out += c;
+            }
+            return out + '"';
+        }
+
+        function stringify(value, replacer, space) {
+            var indent = '';
+            if (typeof space === 'number') {
+                for (var si = 0; si < space && si < 10; si++) indent += ' ';
+            } else if (typeof space === 'string') {
+                indent = space.length > 10 ? space.slice(0, 10) : space;
+            }
+            var gap = indent ? ' ' : '';
+            var rep = (replacer && typeof replacer === 'function') ? replacer : null;
+            var stack = [];
+
+            function str(key, holder) {
+                var v = holder[key];
+                var k, s, i, ks, partial, member;
+                if (v && typeof v === 'object' && typeof v.toJSON === 'function') v = v.toJSON(key);
+                if (rep) v = rep.call(holder, key, v);
+                switch (typeof v) {
+                    case 'string': return quote(v);
+                    case 'number': return isFinite(v) ? String(v) : 'null';
+                    case 'boolean': return String(v);
+                    case 'null': return 'null';
+                    case 'object':
+                        if (v === null) return 'null';
+                        for (s = 0; s < stack.length; s++) {
+                            if (stack[s] === v) throw new TypeError('Converting circular structure to JSON');
+                        }
+                        stack.push(v);
+                        var out = '';
+                        if (Object.prototype.toString.call(v) === '[object Array]') {
+                            partial = [];
+                            for (i = 0; i < v.length; i++) {
+                                partial[i] = str(i, v) || 'null';
+                            }
+                            out = (partial.length === 0)
+                                ? '[]'
+                                : (gap ? '[\n' + indent + partial.join(',\n' + indent) + '\n' + gap + ']'
+                                       : '[' + partial.join(',') + ']');
+                            stack.pop();
+                            return out;
+                        }
+                        ks = [];
+                        for (k in v) if (Object.prototype.hasOwnProperty.call(v, k)) ks.push(k);
+                        partial = [];
+                        for (i = 0; i < ks.length; i++) {
+                            k = ks[i];
+                            member = str(k, v);
+                            if (member !== undefined) partial.push((gap ? indent : '') + quote(k) + ':' + (gap ? ' ' : '') + member);
+                        }
+                        out = (partial.length === 0)
+                            ? '{}'
+                            : (gap ? '{\n' + indent + partial.join(',\n' + indent) + '\n' + gap + '}'
+                                   : '{' + partial.join(',') + '}');
+                        stack.pop();
+                        return out;
+                }
+                return undefined;
+            }
+            return str('', { '': value });
+        }
+
+        // Recursive-descent JSON parser (ES3, no regex backtracking).
+        function parse(text) {
+            var i = 0;
+            var s = String(text);
+
+            function error(msg) { throw new SyntaxError('JSON ' + msg + ': ' + s.slice(0, 40)); }
+            function ws() {
+                while (i < s.length) {
+                    var c = s.charAt(i);
+                    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') i++;
+                    else break;
+                }
+            }
+            function lit(word) {
+                if (s.substr(i, word.length) === word) { i += word.length; return; }
+                error('unexpected token');
+            }
+            function strLit() {
+                if (s.charAt(i) !== '"') error('expected string');
+                i++;
+                var out = '';
+                while (i < s.length) {
+                    var c = s.charAt(i++);
+                    if (c === '"') return out;
+                    if (c === '\\') {
+                        var e = s.charAt(i++);
+                        if (e === '"') out += '"';
+                        else if (e === '\\') out += '\\';
+                        else if (e === '/') out += '/';
+                        else if (e === 'b') out += '\b';
+                        else if (e === 'f') out += '\f';
+                        else if (e === 'n') out += '\n';
+                        else if (e === 'r') out += '\r';
+                        else if (e === 't') out += '\t';
+                        else if (e === 'u') {
+                            out += String.fromCharCode(parseInt(s.substr(i, 4), 16));
+                            i += 4;
+                        } else error('bad escape');
+                    } else out += c;
+                }
+                error('unterminated string');
+            }
+            function value() {
+                ws();
+                var c = s.charAt(i);
+                if (c === '{') {
+                    i++;
+                    var obj = {};
+                    ws();
+                    if (s.charAt(i) === '}') { i++; return obj; }
+                    for (;;) {
+                        ws();
+                        var k = strLit();
+                        ws();
+                        if (s.charAt(i) !== ':') error('expected ":"');
+                        i++;
+                        obj[k] = value();
+                        ws();
+                        if (s.charAt(i) === ',') { i++; continue; }
+                        if (s.charAt(i) === '}') { i++; return obj; }
+                        error('expected "," or "}"');
+                    }
+                }
+                if (c === '[') {
+                    i++;
+                    var arr = [];
+                    ws();
+                    if (s.charAt(i) === ']') { i++; return arr; }
+                    for (;;) {
+                        arr.push(value());
+                        ws();
+                        if (s.charAt(i) === ',') { i++; continue; }
+                        if (s.charAt(i) === ']') { i++; return arr; }
+                        error('expected "," or "]"');
+                    }
+                }
+                if (c === '"') return strLit();
+                if (s.substr(i, 4) === 'true') { i += 4; return true; }
+                if (s.substr(i, 5) === 'false') { i += 5; return false; }
+                if (s.substr(i, 4) === 'null') { i += 4; return null; }
+                var m = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/.exec(s.slice(i));
+                if (m) { i += m[0].length; return Number(m[0]); }
+                error('unexpected token');
+            }
+            var v = value();
+            ws();
+            if (i !== s.length) error('trailing characters');
+            return v;
+        }
+
+        return { stringify: stringify, parse: parse };
+    })();
+
+    // Prefer our implementation whenever the engine's one is missing or wrong.
+    try {
+        var __jsonBroken = (typeof JSON === 'undefined') || !JSON ||
+            (typeof JSON.stringify !== 'function') ||
+            (JSON.stringify({ a: 'b' }) !== '{"a":"b"}') ||
+            (JSON.stringify(['x', 1]) !== '["x",1]') ||
+            (JSON.stringify(null) !== 'null') ||
+            (JSON.stringify('q"') !== '"q\\""');
+        if (__jsonBroken) $.global.JSON = pfxJSON;
+    } catch (e) {
+        try { $.global.JSON = pfxJSON; } catch (e2) {}
+    }
+
     // --- small helpers ----------------------------------------------------
     function ok(payload) {
-        return JSON.stringify({ ok: true, payload: payload === undefined ? null : payload });
+        return pfxJSON.stringify({ ok: true, payload: payload === undefined ? null : payload });
     }
     function err(message) {
-        return JSON.stringify({ ok: false, error: String(message && message.message ? message.message : message) });
+        return pfxJSON.stringify({ ok: false, error: String(message && message.message ? message.message : message) });
     }
     function activeComp() {
         // 1) Primary: what AE reports as the active item.
