@@ -1,452 +1,822 @@
-/* PineappleFX live panel preview (index page) — self-contained, no page deps. */
-  /* ---- live panel preview: all 9 tabs, each with its own working view ---- */
-  (function(){
-    var pills = document.getElementById("mPills"); if(!pills) return;
-    var main = document.querySelector(".mock-main"); if(!main) return;
-    var EASING_HTML = main.innerHTML;
-    var NS = "http://www.w3.org/2000/svg";
-    var GX = 20, GY = 130, GW = 320, GH = 110;
-    var cur = { tab:"Easing", idx:0 };
+/* PineappleFX live panel preview (index page).
+   Data-driven: renders straight from window.PFX_PANEL, which tools/sync_panel_mock.js
+   generates from the real plugin bundle. Same tabs, presets, parameters, footer
+   strings and button labels as the panel inside After Effects. */
+(function () {
+  var D = window.PFX_PANEL;
+  if (!D) return;
+  var root = document.getElementById("mPills");
+  if (!root) return;
+  var main = document.querySelector(".mock-main");
+  var listEl = document.getElementById("mList");
+  var footEl = document.getElementById("mFoot");
+  var applyEl = document.getElementById("mApply");
+  var NS = "http://www.w3.org/2000/svg";
 
-    /* shared bits */
-    function toast(msg){
-      var t = document.getElementById("mToast");
-      if(!t){
-        t = document.createElement("div"); t.id = "mToast";
-        t.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1e1e22;color:#f5f5f4;border:1px solid #feca08;border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;z-index:99;box-shadow:0 12px 30px rgba(0,0,0,.5);white-space:nowrap;";
-        document.body.appendChild(t);
-      }
-      t.textContent = msg; t.style.display = "block";
-      clearTimeout(t.__h); t.__h = setTimeout(function(){ t.style.display = "none"; }, 2600);
-    }
-    function slider(id, vid, min, max, fmt, get, set){
-      var s = document.getElementById(id); if(!s) return function(){};
-      function paint(){
-        var v = get(), t = (v-min)/(max-min);
-        s.style.setProperty("--f", (t*100).toFixed(1) + "%");
-        var vv = document.getElementById(vid); if(vv) vv.textContent = fmt(v);
-      }
-      function fromEvent(e){
-        var r = s.getBoundingClientRect();
-        set(min + Math.max(0, Math.min(1, (e.clientX-r.left)/r.width))*(max-min));
-        paint();
-      }
-      s.style.cursor = "pointer"; s.style.touchAction = "none";
-      s.addEventListener("pointerdown", function(e){
-        try { s.setPointerCapture(e.pointerId); } catch(_){}
-        fromEvent(e);
-        function mv(ev){ fromEvent(ev); }
-        function up(){ s.removeEventListener("pointermove", mv); s.removeEventListener("pointerup", up); }
-        s.addEventListener("pointermove", mv); s.addEventListener("pointerup", up);
-      });
-      paint(); return paint;
-    }
-    function segWire(id, cb){
-      var seg = document.getElementById(id); if(!seg) return;
-      var kids = seg.querySelectorAll("i");
-      Array.prototype.forEach.call(kids, function(k){
-        k.style.cursor = "pointer";
-        k.onclick = function(){
-          Array.prototype.forEach.call(kids, function(x){ x.classList.remove("on"); });
-          k.classList.add("on"); cb(k.textContent);
-        };
-      });
-    }
-    function copyText(txt, doneMsg){
-      function done(){ toast(doneMsg || "Copied."); }
-      try {
-        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done, done); return; }
-        var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta);
-        ta.select(); try { document.execCommand("copy"); } catch(e){}
-        document.body.removeChild(ta); done();
-      } catch(e){ done(); }
-    }
+  /* graph geometry, taken from the real easing editor (viewBox 360x200, pad 22) */
+  var GX = 22, GY = 22, GW = 316, GH = 156;
 
-    /* one-shot CSS for the demo stages */
-    (function(){
-      if(document.getElementById("mDemoCss")) return;
-      var st = document.createElement("style"); st.id = "mDemoCss";
-      st.textContent = ".mstage{background:#202024;border:1px solid #3a3a3f;border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}"
-        + ".mstage .tx{font-size:34px;font-weight:800;letter-spacing:-1px;color:#f2f2f0;}"
-        + "@keyframes mSlideUp{from{opacity:0;transform:translateY(var(--dist,60px));}to{opacity:1;transform:none;}}"
-        + "@keyframes mFade{from{opacity:0;}to{opacity:1;}}"
-        + "@keyframes mBounce{0%{opacity:0;transform:translateY(var(--dist,60px));}60%{opacity:1;transform:translateY(calc(var(--dist,60px) * -.25));}80%{transform:translateY(calc(var(--dist,60px) * .1));}100%{opacity:1;transform:none;}}"
-        + "@keyframes mType{from{width:0;}to{width:9ch;}}"
-        + ".mglassbg{background:linear-gradient(135deg,#ff9f0a,#ff375f 40%,#5e5ce6 75%,#0a84ff);}"
-        + ".mart{background:conic-gradient(from 40deg,#ff9f0a,#ff375f,#bf5af2,#0a84ff,#30d158,#ff9f0a);}"
-        + ".mphone{background:#000;border:1px solid #3a3a3f;border-radius:28px;padding:10px;box-shadow:0 18px 40px rgba(0,0,0,.5);}"
-        + ".mscreen{border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(180deg,#2c2c30,#101014);}"
-        + ".misland{background:#000;border-radius:999px;position:absolute;top:8px;left:50%;transform:translateX(-50%);}"
-        + ".mtoolbtn{cursor:pointer;background:#202024;border:1px solid #3a3a3f;color:#f2f2f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;text-align:center;}"
-        + ".mtoolbtn:hover{border-color:#feca08;}"
-        + ".mpre{background:#141416;border:1px solid #3a3a3f;border-radius:10px;padding:12px;font-family:monospace;font-size:11px;line-height:1.6;color:#e8e8e6;white-space:pre;overflow:auto;max-height:220px;margin:0;}";
-      document.head.appendChild(st);
-    })();
+  var cur = { tab: 0, idx: 0 };
+  var vals = {};          /* per-preset parameter values, reset on selection */
+  var applyState = null;  /* current footer/button contract for the active view */
 
-    /* preset data */
-    var TABS = {
-      Easing: ["Apple Standard","Emphasized","Decelerated","Spring - Soft","Spring - Bouncy","Snap","Anticipate","Bouncy"],
-      Text: ["Slide Up","Typewriter","Word Bounce","Fade Words"],
-      Transitions: ["Fade Chars","Rise Chars","Drop Chars","Spin Chars"],
-      Glass: ["Liquid Glass","Frost","Tint","Glow"],
-      Styles: ["Grade Warm","Noir","Vintage","Clean"],
-      Expressions: ["Wiggle","Bounce Out","Loop Out","Orbit"],
-      Numbers: ["Counter","Timer","Percentage","Score"],
-      Devices: ["iPhone 15 Pro","iPhone 15 Pro Max","iPad Pro 11"],
-      Tools: ["Sequence Layers","Center Anchor","Add Text Box","Shuffle Colors","Remove FX"]
-    };
-    var ECURVES = {
-      "Apple Standard":[.4,0,.2,1], "Emphasized":[.2,0,0,1], "Decelerated":[0,0,.2,1],
-      "Snap":[.3,1.3,.4,1], "Anticipate":[.6,-.4,.4,1]
-    };
-    var ESPRINGS = { "Spring - Soft":{f:1.2,dmp:6}, "Spring - Bouncy":{f:1.8,dmp:4}, "Bouncy":{f:2.2,dmp:3} };
-    var EPARAMS = { "Apple Standard":[1.5,21], "Emphasized":[1.2,18], "Decelerated":[1.0,14], "Spring - Soft":[1.6,24], "Spring - Bouncy":[1.4,20], "Snap":[.8,12], "Anticipate":[1.1,16], "Bouncy":[1.3,22] };
-    var TEX = {
-      "Slide Up":{a:"mSlideUp"}, "Typewriter":{a:"mType", mono:1},
-      "Word Bounce":{a:"mBounce"}, "Fade Words":{a:"mFade"}
-    };
-    var GLASS = {
-      "Liquid Glass":{b:18,s:150,t:"#88c0ff"}, "Frost":{b:32,s:120,t:"#ffffff"},
-      "Tint":{b:8,s:170,t:"#ffb020"}, "Glow":{b:4,s:140,t:"#ff5f9e"}
-    };
-    var STYLES = {
-      "Grade Warm":function(x){ return "sepia("+(.7*x)+") saturate("+(1+x)+") contrast("+(1+.3*x)+")"; },
-      "Noir":function(x){ return "grayscale(1) contrast("+(1+.5*x)+") brightness("+(1-.1*x)+")"; },
-      "Vintage":function(x){ return "sepia("+(.9*x)+") hue-rotate(" + (-18*x) + "deg) contrast("+(1+.1*x)+")"; },
-      "Clean":function(x){ return "saturate("+(1+.4*x)+") contrast("+(1+.08*x)+")"; }
-    };
-    var EXPR = {
-      "Wiggle":{t:"Position", code:function(p){ return "// PineappleFX - Wiggle\nfreq = "+p.f+";\namp = "+p.a+";\nwiggle(freq, amp);"; }},
-      "Bounce Out":{t:"Position", code:function(p){ return "// PineappleFX - Bounce Out\namp = 0.5;\nfreq = "+p.f+";\ndecay = 5;\nn = 0;\nif (numKeys > 0) {\n    n = nearestKey(time).index;\n    if (key(n).time > time) n--;\n}\nif (n >= 2) {\n    t = time - key(n).time;\n    delta = key(n).value - key(n - 1).value;\n    value + delta * amp * Math.sin(freq * t * 2 * Math.PI) / Math.exp(decay * t);\n} else {\n    value;\n}"; }},
-      "Loop Out":{t:"Any transform", code:function(p){ return "// PineappleFX - Loop Out\nloopOut(\"cycle\");"; }},
-      "Orbit":{t:"Position", code:function(p){ return "// PineappleFX - Orbit\nr = "+p.a+";\nspeed = "+p.f+";\na = time * 2 * Math.PI * speed;\n[value[0] + Math.cos(a) * r, value[1] + Math.sin(a) * r];"; }}
-    };
-    var DEVICES = {
-      "iPhone 15 Pro":{w:120, h:248, spec:"393 x 852 pt", island:1},
-      "iPhone 15 Pro Max":{w:132, h:272, spec:"430 x 932 pt", island:1},
-      "iPad Pro 11":{w:190, h:252, spec:"834 x 1194 pt", island:0}
-    };
+  /* ---------- i18n: the panel's own English strings ---------- */
+  function y(key, fallback) { var s = D.i18n[key]; return (s === undefined ? (fallback || key) : s); }
+  function en(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
-    /* ---------- EASING (original curve editor, rewired per render) ---------- */
-    var est = { curve:[.4,0,.2,1], spring:null, dur:1.5, blur:21, color:"#FECA08" };
-    function X(x){ return GX + x*GW; }
-    function Y(y){ return GY - y*GH; }
-    function sEl(n, attrs){ var e = document.createElementNS(NS, n); for(var k in attrs) e.setAttribute(k, attrs[k]); return e; }
-    function springPath(f, dmp){
-      var pts = [];
-      for(var g = 0; g <= 60; g++){
-        var v = g/60*1.35, b = 1 - Math.exp(-dmp*v)*Math.cos(f*2*Math.PI*v);
-        pts.push((GX+v/1.35*GW).toFixed(1) + "," + (GY-b*GH*0.85).toFixed(1));
-      }
-      return "M" + pts.join(" L");
-    }
-    function drawCurve(){
-      var box = document.getElementById("mCurve"); if(!box) return;
-      box.innerHTML = "";
-      var svg = sEl("svg", {viewBox:"0 0 360 150", width:"100%", height:"120", preserveAspectRatio:"xMidYMid meet"});
-      var grid = sEl("g", {stroke:"#3a3a3f", "stroke-width":1});
-      grid.appendChild(sEl("line", {x1:20, y1:20, x2:20, y2:130}));
-      grid.appendChild(sEl("line", {x1:20, y1:130, x2:340, y2:130}));
-      svg.appendChild(grid);
-      if(est.spring){
-        svg.appendChild(sEl("path", {d:springPath(est.spring.f, est.spring.dmp), fill:"none", stroke:"#feca08", "stroke-width":3, "stroke-linecap":"round"}));
-      } else {
-        var c = est.curve, h1x = X(c[0]), h1y = Y(c[1]), h2x = X(c[2]), h2y = Y(c[3]);
-        svg.appendChild(sEl("line", {x1:GX, y1:GY, x2:h1x, y2:h1y, stroke:"#717171", "stroke-dasharray":"3 3"}));
-        svg.appendChild(sEl("line", {x1:GX+GW, y1:GY-GH, x2:h2x, y2:h2y, stroke:"#717171", "stroke-dasharray":"3 3"}));
-        svg.appendChild(sEl("path", {d:"M "+GX+" "+GY+" C "+h1x+" "+h1y+" "+h2x+" "+h2y+" "+(GX+GW)+" "+(GY-GH), fill:"none", stroke:"#feca08", "stroke-width":3, "stroke-linecap":"round"}));
-        [[h1x,h1y,1],[h2x,h2y,2]].forEach(function(pt){
-          var g = sEl("circle", {cx:pt[0], cy:pt[1], r:11, fill:"transparent", style:"cursor:grab;touch-action:none"});
-          svg.appendChild(g);
-          svg.appendChild(sEl("circle", {cx:pt[0], cy:pt[1], r:5, fill:"#feca08", "pointer-events":"none"}));
-          g.addEventListener("pointerdown", function(e){
-            e.preventDefault();
-            try { g.setPointerCapture(e.pointerId); } catch(_){}
-            function mv(ev){
-              var r = svg.getBoundingClientRect();
-              var sc = Math.min(r.width/360, r.height/150);
-              var px = (ev.clientX - r.left - (r.width-360*sc)/2)/sc;
-              var py = (ev.clientY - r.top - (r.height-150*sc)/2)/sc;
-              var nx = Math.max(0, Math.min(1, (px-GX)/GW));
-              var ny = Math.max(-.6, Math.min(1.6, (GY-py)/GH));
-              if(pt[2] === 1){ est.curve[0] = +nx.toFixed(3); est.curve[1] = +ny.toFixed(3); }
-              else { est.curve[2] = +nx.toFixed(3); est.curve[3] = +ny.toFixed(3); }
-              drawCurve();
-            }
-            function up(){ g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); }
-            g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up);
-          });
-        });
-      }
-      svg.appendChild(sEl("circle", {cx:GX, cy:GY, r:4, fill:"#f2f2f0"}));
-      svg.appendChild(sEl("circle", {cx:GX+GW, cy:GY-GH, r:4, fill:"#f2f2f0"}));
-      box.appendChild(svg);
-      var fm = document.getElementById("mFormula");
-      if(fm) fm.textContent = est.spring ? ("spring f=" + est.spring.f + " d=" + est.spring.dmp) : ("cubic-bezier(" + est.curve.join(", ") + ")");
-    }
-    function wireEasing(){
-      var nm = document.getElementById("mName");
-      var label = TABS.Easing[cur.idx];
-      if(nm) nm.textContent = label;
-      if(ECURVES[label]){ est.curve = ECURVES[label].slice(); est.spring = null; }
-      else if(ESPRINGS[label]){ est.spring = ESPRINGS[label]; est.curve = null; }
-      var pr = EPARAMS[label] || [1.2, 18];
-      est.dur = pr[0]; est.blur = pr[1];
-      slider("mDurS", "mDurV", .2, 3, function(v){ return v.toFixed(2) + " s"; },
-        function(){ return est.dur; }, function(v){ est.dur = +v.toFixed(2); });
-      slider("mBlurS", "mBlurV", 0, 60, function(v){ return Math.round(v) + " px"; },
-        function(){ return est.blur; }, function(v){ est.blur = Math.round(v); });
-      segWire("mSeg", function(){});
-      var sw = document.getElementById("mSw"), hx = document.getElementById("mHex");
-      if(sw){
-        var ci = document.createElement("input");
-        ci.type = "color"; ci.value = "#feca08"; ci.style.display = "none";
-        document.body.appendChild(ci);
-        sw.style.cursor = "pointer"; sw.title = "Click to pick a color";
-        sw.onclick = function(){ ci.click(); };
-        ci.oninput = function(){
-          est.color = ci.value.toUpperCase();
-          sw.style.background = ci.value;
-          if(hx) hx.textContent = est.color;
-        };
-      }
-      drawCurve();
-    }
+  /* ---------- helpers used by the preset code generators ---------- */
+  function O(o, k) { var n = o[k]; return typeof n === "number" ? n : Number(n); }
+  function uc(o, k) { return String(o[k] === undefined || o[k] === null ? "" : o[k]); }
+  function V(x) { if (!isFinite(x)) return "0"; return String(Math.round(x * 1e3) / 1e3); }
 
-    /* ---------- other views ---------- */
-    var vst = { tDur:1.2, tDist:60, dir:"In", gB:18, gS:150, gT:"#88c0ff",
-      sInt:70, eF:1.5, eA:40, nFrom:0, nTo:1000, nDur:2, dev:"iPhone 15 Pro" };
+  var PF = { none: "", space: " ", comma: ",", dot: ".", apostrophe: "\u2019" };
+  var FF = { dot: ".", comma: "," };
+  function we(o, k, d) { var v = o[k]; return typeof v === "string" ? v : d; }
+  function fn(o, k, d) { var v = o[k], n = typeof v === "number" ? v : Number(v); return isFinite(n) ? n : d; }
 
-    function rowHTML(label, inner){
-      return '<div class="prow"><b>' + label + '</b>' + inner + '</div>';
-    }
-    function sliderRow(id, vid, label){
-      return rowHTML(label, '<span class="mslider" id="' + id + '"></span><span id="' + vid + '"></span>');
-    }
+  /* number-counter value formatter + expression builder — ported from the panel */
+  function pl(val, fmt) {
+    var dec = Math.max(0, Math.min(4, Math.round(fn(fmt, "decimals", 0))));
+    var pad = Math.max(0, Math.min(8, Math.round(fn(fmt, "pad", 0))));
+    var tsep = PF[we(fmt, "thousandSep", "none")] || "";
+    var dsep = FF[we(fmt, "decimalSep", "dot")] || ".";
+    var pre = we(fmt, "prefix", ""), suf = we(fmt, "suffix", "");
+    var gap = we(fmt, "gap", "none") === "space" ? " " : "";
+    var neg = val < 0, m = Math.abs(val);
+    var fixed = dec > 0 ? m.toFixed(dec) : String(Math.round(m));
+    var dotAt = fixed.indexOf(".");
+    var ip = dotAt === -1 ? fixed : fixed.slice(0, dotAt);
+    var fp = dotAt === -1 ? "" : fixed.slice(dotAt + 1);
+    while (ip.length < pad) ip = "0" + ip;
+    if (tsep) { var g = "", c = 0; for (var i = ip.length - 1; i >= 0; i--) { g = ip.charAt(i) + g; c++; if (c % 3 === 0 && i > 0) g = tsep + g; } ip = g; }
+    var out = fp !== "" ? ip + dsep + fp : ip;
+    if (pre !== "") out = pre + gap + out;
+    if (suf !== "") out = out + gap + suf;
+    if (neg) out = "-" + out;
+    return out;
+  }
+  function bf(e) {
+    var t = we(e, "ease", "ease"), n = t === "linear" ? "linear" : t;
+    var r = PF[we(e, "thousandSep", "none")] || "";
+    var a = FF[we(e, "decimalSep", "dot")] || ".";
+    var i = we(e, "gap", "none") === "space" ? " " : "";
+    return [
+      "// PineappleFX \u00b7 Number Counter",
+      "// Start / End / Duration / Decimals / Leading Zeros are live on this layer.",
+      "var TSEP = " + JSON.stringify(r) + ";",
+      "var DSEP = " + JSON.stringify(a) + ";",
+      "var PRE  = " + JSON.stringify(we(e, "prefix", "")) + ";",
+      "var SUF  = " + JSON.stringify(we(e, "suffix", "")) + ";",
+      "var GAP  = " + JSON.stringify(i) + ";",
+      "",
+      'var s = effect("PineappleFX Start")(1);',
+      'var e = effect("PineappleFX End")(1);',
+      'var d = Math.max(0.001, effect("PineappleFX Duration")(1));',
+      'var dec = Math.max(0, Math.min(4, Math.round(effect("PineappleFX Decimals")(1))));',
+      'var pad = Math.max(0, Math.min(8, Math.round(effect("PineappleFX Leading Zeros")(1))));',
+      "",
+      "var t = time - inPoint;",
+      "var v = " + n + "(t, 0, d, s, e);",
+      "",
+      "var neg = v < 0;",
+      "var m = Math.abs(v);",
+      "var fixed = dec > 0 ? m.toFixed(dec) : String(Math.round(m));",
+      'var dotAt = fixed.indexOf(".");',
+      'var ip = dotAt === -1 ? fixed : fixed.substring(0, dotAt);',
+      'var fp = dotAt === -1 ? "" : fixed.substring(dotAt + 1);',
+      "",
+      'while (ip.length < pad) ip = "0" + ip;',
+      "",
+      'if (TSEP !== "") {',
+      '  var g = "";',
+      "  var c = 0;",
+      "  for (var i = ip.length - 1; i >= 0; i--) {",
+      "    g = ip.charAt(i) + g;",
+      "    c++;",
+      "    if (c % 3 === 0 && i > 0) g = TSEP + g;",
+      "  }",
+      "  ip = g;",
+      "}",
+      "",
+      'var out = fp !== "" ? ip + DSEP + fp : ip;',
+      'if (PRE !== "") out = PRE + GAP + out;',
+      'if (SUF !== "") out = out + GAP + SUF;',
+      "// Sign outside the affixes: -$1,234.56, never $-1,234.56.",
+      'if (neg) out = "-" + out;',
+      "out;"
+    ].join("\n");
+  }
+  function Y1(t, dur, ease) {
+    var r = Math.max(0, Math.min(1, dur > 0 ? t / dur : 1));
+    switch (ease) { case "linear": return r; case "easeIn": return r * r; case "easeOut": return 1 - (1 - r) * (1 - r); default: return r * r * (3 - 2 * r); }
+  }
 
-    var VIEWS = {
-      Text: function(){
-        main.innerHTML = '<div class="mstage" style="min-height:170px;"><div class="tx" id="mTx">Pineapple</div></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + sliderRow("mTDur", "mTDurV", "Duration")
-          + sliderRow("mTDist", "mTDistV", "Distance")
-          + rowHTML("", '<button id="mReplay" class="apply" style="border:none;">Replay</button>')
-          + '</div>';
-        function play(){
-          var t = document.getElementById("mTx"); if(!t) return;
-          var key = TABS.Text[cur.idx], cfg = TEX[key] || {a:"mFade"};
-          t.style.fontFamily = cfg.mono ? "monospace" : "inherit";
-          t.style.overflow = cfg.mono ? "hidden" : "visible";
-          t.style.whiteSpace = cfg.mono ? "nowrap" : "normal";
-          t.style.setProperty("--dist", vst.tDist + "px");
-          t.style.animation = "none"; void t.offsetWidth;
-          t.style.animation = cfg.a + " " + vst.tDur + "s cubic-bezier(.3,1.4,.4,1) both";
-        }
-        slider("mTDur", "mTDurV", .3, 3, function(v){ return v.toFixed(1) + " s"; },
-          function(){ return vst.tDur; }, function(v){ vst.tDur = +v.toFixed(1); });
-        slider("mTDist", "mTDistV", 0, 200, function(v){ return Math.round(v) + " px"; },
-          function(){ return vst.tDist; }, function(v){ vst.tDist = Math.round(v); });
-        document.getElementById("mReplay").onclick = play;
-        play();
-      },
-      Transitions: function(){
-        main.innerHTML = '<div class="mstage" style="min-height:170px;"><div id="mCard" style="background:linear-gradient(135deg,#feca08,#ff8a3d);border-radius:12px;padding:22px 34px;font-weight:800;color:#241a04;">Pineapple</div></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + rowHTML("Direction", '<span class="seg" id="mDirSeg"><i class="on">In</i><i>Out</i></span>')
-          + sliderRow("mTrDur", "mTrDurV", "Duration")
-          + rowHTML("", '<button id="mTrGo" class="apply" style="border:none;">Replay transition</button>')
-          + '</div>';
-        slider("mTrDur", "mTrDurV", .2, 2, function(v){ return v.toFixed(2) + " s"; },
-          function(){ return vst.tDur; }, function(v){ vst.tDur = +v.toFixed(2); });
-        segWire("mDirSeg", function(v){ vst.dir = v; });
-        var names = TABS.Transitions;
-        document.getElementById("mTrGo").onclick = function(){
-          var card = document.getElementById("mCard"); if(!card || !card.animate) return;
-          var name = names[cur.idx] || names[0], ms = vst.tDur*1000, into = (vst.dir === "In");
-          var fx = { "Fade Chars":[{opacity:0},{opacity:1}],
-            "Rise Chars":[{opacity:0,transform:"translateY(40px)"},{opacity:1,transform:"none"}],
-            "Drop Chars":[{opacity:0,transform:"translateY(-40px)"},{opacity:1,transform:"none"}],
-            "Spin Chars":[{opacity:0,transform:"rotate(-90deg) scale(.6)"},{opacity:1,transform:"none"}] }[name] || [{opacity:0},{opacity:1}];
-          var seq = into ? fx : fx.slice().reverse();
-          var an = card.animate(seq, {duration:ms, easing:"cubic-bezier(.3,1.3,.4,1)", fill:"forwards"});
-          if(an && an.finished){ an.finished.then(function(){
-            setTimeout(function(){ card.animate(into ? seq : fx, {duration:1, fill:"forwards"}); }, 350);
-          }); }
-        };
-      },
-      Glass: function(){
-        main.innerHTML = '<div class="mstage mglassbg" style="min-height:170px;"><div id="mFrost" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:16px;padding:26px 40px;font-weight:800;font-size:20px;color:#fff;">Glass</div></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + sliderRow("mGB", "mGBV", "Blur")
-          + sliderRow("mGS", "mGSV", "Saturation")
-          + rowHTML("Tint", '<span class="swatch" id="mGT"></span><span id="mGTV">#88C0FF</span>')
-          + '</div>';
-        function paint(){
-          var f = document.getElementById("mFrost"); if(!f) return;
-          f.style.backdropFilter = "blur(" + vst.gB + "px) saturate(" + vst.gS + "%)";
-          f.style.webkitBackdropFilter = f.style.backdropFilter;
-          f.style.background = "rgba(255,255,255,.14)";
-          f.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.4), 0 8px 24px rgba(0,0,0,.25)";
-          var t = document.getElementById("mGT"), tv = document.getElementById("mGTV");
-          if(t){ t.style.background = vst.gT; if(tv) tv.textContent = vst.gT.toUpperCase(); }
-          var bv = document.getElementById("mGBV"); if(bv) bv.textContent = Math.round(vst.gB) + " px";
-          var sv = document.getElementById("mGSV"); if(sv) sv.textContent = Math.round(vst.gS) + " %";
-        }
-        function applyPreset(){
-          var g = GLASS[TABS.Glass[cur.idx]] || GLASS["Liquid Glass"];
-          vst.gB = g.b; vst.gS = g.s; vst.gT = g.t;
-          var bs = document.getElementById("mGB"), ss = document.getElementById("mGS");
-          if(bs) bs.style.setProperty("--f", (vst.gB/40*100) + "%");
-          if(ss) ss.style.setProperty("--f", ((vst.gS-100)/100*100) + "%");
-          paint();
-        }
-        slider("mGB", "mGBV", 0, 40, function(v){ return Math.round(v) + " px"; },
-          function(){ return vst.gB; }, function(v){ vst.gB = Math.round(v); paint(); });
-        slider("mGS", "mGSV", 100, 200, function(v){ return Math.round(v) + " %"; },
-          function(){ return vst.gS; }, function(v){ vst.gS = Math.round(v); paint(); });
-        var t = document.getElementById("mGT");
-        if(t){
-          var ci = document.createElement("input");
-          ci.type = "color"; ci.value = "#88c0ff"; ci.style.display = "none";
-          document.body.appendChild(ci);
-          t.style.cursor = "pointer";
-          t.onclick = function(){ ci.click(); };
-          ci.oninput = function(){ vst.gT = ci.value; paint(); };
-        }
-        applyPreset();
-      },
-      Styles: function(){
-        main.innerHTML = '<div class="mstage" style="min-height:170px;"><div id="mArt" class="mart" style="width:220px;height:120px;border-radius:12px;"></div></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + sliderRow("mSI", "mSIV", "Intensity")
-          + '</div>';
-        function paint(){
-          var a = document.getElementById("mArt"); if(!a) return;
-          var fn = STYLES[TABS.Styles[cur.idx]] || STYLES["Grade Warm"];
-          a.style.filter = fn(vst.sInt/100);
-        }
-        slider("mSI", "mSIV", 0, 100, function(v){ return Math.round(v) + " %"; },
-          function(){ return vst.sInt; }, function(v){ vst.sInt = Math.round(v); paint(); });
-        paint();
-      },
-      Expressions: function(){
-        main.innerHTML = '<pre class="mpre" id="mCode"></pre>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + rowHTML("Applies to", '<span style="color:#f2f2f0;" id="mTarget">Position</span>')
-          + sliderRow("mEF", "mEFV", "Frequency")
-          + sliderRow("mEA", "mEAV", "Amplitude")
-          + rowHTML("", '<button id="mCopy" class="apply" style="border:none;">Copy expression</button>')
-          + '</div>';
-        function paint(){
-          var spec = EXPR[TABS.Expressions[cur.idx]] || EXPR.Wiggle;
-          var code = spec.code({f:vst.eF, a:Math.round(vst.eA)});
-          document.getElementById("mCode").textContent = code;
-          document.getElementById("mTarget").textContent = spec.t;
-        }
-        slider("mEF", "mEFV", .1, 10, function(v){ return (+v).toFixed(1) + " Hz"; },
-          function(){ return vst.eF; }, function(v){ vst.eF = +(+v).toFixed(1); paint(); });
-        slider("mEA", "mEAV", 0, 200, function(v){ return Math.round(v) + " px"; },
-          function(){ return vst.eA; }, function(v){ vst.eA = Math.round(v); paint(); });
-        document.getElementById("mCopy").onclick = function(){
-          copyText(document.getElementById("mCode").textContent, "Expression copied.");
-        };
-        paint();
-      },
-      Numbers: function(){
-        main.innerHTML = '<div class="mstage" style="min-height:150px;"><div id="mNum" style="font-family:monospace;font-size:52px;font-weight:800;color:#feca08;">0</div></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + sliderRow("mNFrom", "mNFromV", "From")
-          + sliderRow("mNTo", "mNToV", "To")
-          + sliderRow("mNDur", "mNDurV", "Duration")
-          + rowHTML("", '<button id="mNGo" class="apply" style="border:none;">Run counter</button>')
-          + '</div>';
-        slider("mNFrom", "mNFromV", 0, 500, function(v){ return "" + Math.round(v); },
-          function(){ return vst.nFrom; }, function(v){ vst.nFrom = Math.round(v); });
-        slider("mNTo", "mNToV", 100, 1000, function(v){ return "" + Math.round(v); },
-          function(){ return vst.nTo; }, function(v){ vst.nTo = Math.round(v); });
-        slider("mNDur", "mNDurV", .5, 5, function(v){ return (+v).toFixed(1) + " s"; },
-          function(){ return vst.nDur; }, function(v){ vst.nDur = +(+v).toFixed(1); });
-        document.getElementById("mNGo").onclick = function(){
-          var n0 = vst.nFrom, n1 = vst.nTo, dur = vst.nDur*1000, t0 = null;
-          var elN = document.getElementById("mNum");
-          function frame(t){
-            if(t0 === null) t0 = t;
-            var p = Math.min(1, (t-t0)/dur), e = 1-Math.pow(1-p, 3);
-            elN.textContent = Math.round(n0 + (n1-n0)*e);
-            if(p < 1) requestAnimationFrame(frame);
-          }
-          if(window.requestAnimationFrame) requestAnimationFrame(frame);
-          else elN.textContent = n1;
-        };
-      },
-      Devices: function(){
-        main.innerHTML = '<div class="mstage" style="min-height:300px;" id="mDevStage"></div>'
-          + '<div class="mock-params" style="margin-top:12px;">'
-          + rowHTML("Size", '<span style="color:#f2f2f0;" id="mDevSpec"></span>')
-          + '</div>';
-        function paint(){
-          var key = TABS.Devices[cur.idx] || "iPhone 15 Pro";
-          var d = DEVICES[key];
-          var st = document.getElementById("mDevStage"); if(!st) return;
-          st.innerHTML = '<div class="mphone" style="width:' + d.w + 'px;">'
-            + '<div class="mscreen" style="height:' + d.h + 'px;">'
-            + (d.island ? '<div class="misland" style="width:52px;height:16px;"></div>' : '')
-            + '<div style="position:absolute;top:26px;left:0;right:0;text-align:center;color:#fff;font-size:11px;font-weight:700;">9:41</div>'
-            + '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(254,202,8,.35),rgba(255,55,95,.25) 60%,rgba(10,132,255,.3));"></div>'
-            + '<div style="position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:10px;font-weight:700;">Pineapple</div>'
-            + '</div></div>';
-          document.getElementById("mDevSpec").textContent = d.spec;
-        }
-        paint();
-      },
-      Tools: function(){
-        var names = TABS.Tools;
-        var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-        names.forEach(function(n){ html += '<div class="mtoolbtn" data-t="' + n + '">' + n + '</div>'; });
-        main.innerHTML = html + '</div>';
-        Array.prototype.forEach.call(main.querySelectorAll(".mtoolbtn"), function(b){
-          b.onclick = function(){ toast(b.getAttribute("data-t") + " runs inside After Effects."); };
-        });
-      }
-    };
-
-    /* shell */
-    var list = document.getElementById("mList");
-    function renderList(){
-      if(!list) return;
-      list.innerHTML = "";
-      TABS[cur.tab].forEach(function(label, i){
-        var it = document.createElement("i");
-        it.textContent = label;
-        if(i === cur.idx) it.className = "on";
-        it.onclick = function(){ select(cur.tab, i); };
-        list.appendChild(it);
-      });
-    }
-    function renderPills(){
-      Array.prototype.forEach.call(pills.children, function(k){
-        if(k.textContent === cur.tab) k.classList.add("on");
-        else k.classList.remove("on");
-      });
-    }
-    function renderMain(){
-      if(cur.tab === "Easing"){
-        main.innerHTML = EASING_HTML;
-        wireEasing();
-      } else {
-        VIEWS[cur.tab]();
-      }
-    }
-    function select(tab, idx){
-      cur.tab = tab; cur.idx = idx;
-      renderPills(); renderList(); renderMain();
-    }
-    Array.prototype.forEach.call(pills.children, function(k){
-      k.style.cursor = "pointer";
-      k.onclick = function(){ if(TABS[k.textContent]) select(k.textContent, 0); };
-    });
-    var ap = document.getElementById("mApply");
-    if(ap){ ap.style.cursor = "pointer"; ap.onclick = function(){ toast("Live demo - Apply works inside After Effects once activated."); }; }
-    select("Easing", 0);
+  /* ---------- one-shot CSS for the demo stages ---------- */
+  (function () {
+    if (document.getElementById("mDemoCss")) return;
+    var st = document.createElement("style"); st.id = "mDemoCss";
+    st.textContent =
+      ".mock-list i .msub{display:block;font-size:9.5px;opacity:.7;margin-top:2px;line-height:1.2;}" +
+      ".mock-list i.on .msub{opacity:.75;}" +
+      ".mhead h4{margin:0;font-size:14px;font-weight:600;color:var(--mock-txt);}" +
+      ".mhead p{margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--mock-dim);}" +
+      ".mcap{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--mock-dim);margin:0 0 7px;font-weight:700;}" +
+      ".mbadge{display:inline-block;font-size:9.5px;color:#feca08;border:1px solid rgba(254,202,8,.45);border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:middle;font-weight:600;}" +
+      ".mchips{display:flex;flex-wrap:wrap;gap:5px;}" +
+      ".mchip{font-style:normal;padding:4px 11px;border-radius:8px;border:1px solid var(--mock-line);color:var(--mock-dim);cursor:pointer;font-size:11px;background:var(--mock-card);}" +
+      ".mchip:hover{color:var(--mock-txt);}" +
+      ".mchip.on{background:#feca08;color:#241a04;border-color:#feca08;font-weight:600;}" +
+      ".mnum{width:66px;background:transparent;border:1px solid transparent;border-radius:5px;color:var(--mock-txt);font-family:ui-monospace,monospace;font-size:11px;text-align:right;outline:none;padding:2px 4px;}" +
+      ".mnum:focus{border-color:var(--mock-line);background:var(--mock-card);}" +
+      ".munit{color:var(--mock-dim);font-size:10.5px;min-width:14px;}" +
+      ".mtxt{width:120px;background:var(--mock-card);border:1px solid var(--mock-line);border-radius:6px;color:var(--mock-txt);font-size:11px;padding:4px 7px;outline:none;}" +
+      ".mdetail{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:11.5px;color:var(--mock-dim);}" +
+      ".mdetail span:last-child{font-family:ui-monospace,monospace;color:var(--mock-txt);}" +
+      ".mhint{font-size:10.5px;color:var(--mock-dim);margin-top:7px;line-height:1.5;}" +
+      ".mstage{background:var(--mock-card);border:1px solid var(--mock-line);border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}" +
+      ".mstage .tx{font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--mock-txt);}" +
+      "@keyframes mSlideUp{from{opacity:0;transform:translateY(var(--dist,60px));}to{opacity:1;transform:none;}}" +
+      "@keyframes mFade{from{opacity:0;}to{opacity:1;}}" +
+      "@keyframes mBounce{0%{opacity:0;transform:translateY(var(--dist,60px));}60%{opacity:1;transform:translateY(calc(var(--dist,60px) * -.25));}80%{transform:translateY(calc(var(--dist,60px) * .1));}100%{opacity:1;transform:none;}}" +
+      "@keyframes mType{from{width:0;}to{width:10ch;}}" +
+      ".mglassbg{background:linear-gradient(135deg,#ff9f0a,#ff375f 40%,#5e5ce6 75%,#0a84ff);}" +
+      ".mart{background:conic-gradient(from 40deg,#ff9f0a,#ff375f,#bf5af2,#0a84ff,#30d158,#ff9f0a);}" +
+      ".mphone{background:#111;border:1px solid #48484c;position:relative;}" +
+      ".mscreen{position:absolute;overflow:hidden;background:linear-gradient(180deg,#2c2c30,#101014);}" +
+      ".misland{background:#000;position:absolute;left:50%;transform:translateX(-50%);}" +
+      ".mpre{background:#141416;border:1px solid var(--mock-line);border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:10.5px;line-height:1.6;color:#e8e8e6;white-space:pre;overflow:auto;max-height:190px;margin:0;}" +
+      ".mcodehead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}" +
+      ".mcopy{font-style:normal;font-size:10.5px;color:var(--mock-dim);cursor:pointer;border:1px solid var(--mock-line);border-radius:999px;padding:2px 10px;background:var(--mock-card);}" +
+      ".mcopy:hover{color:#feca08;border-color:#feca08;}";
+    document.head.appendChild(st);
   })();
 
+  /* ---------- shared UI bits ---------- */
+  function toast(msg) {
+    var t = document.getElementById("mToast");
+    if (!t) {
+      t = document.createElement("div"); t.id = "mToast";
+      t.style.cssText = "position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1e1e22;color:#f5f5f4;border:1px solid #feca08;border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;z-index:99;box-shadow:0 12px 30px rgba(0,0,0,.5);white-space:nowrap;";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.display = "block";
+    clearTimeout(t.__h); t.__h = setTimeout(function () { t.style.display = "none"; }, 2800);
+  }
+  function copyText(txt, msg) {
+    function done() { toast(msg || "Copied."); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(done, done); return; }
+      var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta); done();
+    } catch (e) { done(); }
+  }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function svgEl(n, attrs) {
+    var e = document.createElementNS(NS, n);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  /* ---------- parameter widgets (match the panel's renderers) ---------- */
+  function numRow(p, value, onChange) {
+    var wrap = el("div", "prow");
+    var lab = el("b"); lab.textContent = y("__lbl_" + p.id, p.label);
+    wrap.appendChild(lab);
+    var sl = el("span", "mslider");
+    var inp = document.createElement("input");
+    inp.className = "mnum"; inp.type = "number";
+    inp.min = p.min; inp.max = p.max; inp.step = p.step;
+    if (p.decimals !== undefined) inp.setAttribute("data-dec", p.decimals);
+    var unit = el("span", "munit"); unit.textContent = p.unit || "";
+    function paint() {
+      var v = Math.max(p.min, Math.min(p.max, value));
+      var t = p.max > p.min ? (v - p.min) / (p.max - p.min) : 0;
+      sl.style.setProperty("--f", (t * 100).toFixed(1) + "%");
+      if (document.activeElement !== inp) inp.value = p.decimals !== undefined ? (+v).toFixed(p.decimals) : (+v).toFixed(2).replace(/\.?0+$/, "") || "0";
+      return v;
+    }
+    function fromPointer(e) {
+      var r = sl.getBoundingClientRect();
+      var t = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      var raw = p.min + t * (p.max - p.min);
+      if (p.step && p.step >= 1) raw = Math.round(raw / p.step) * p.step;
+      onChange(+raw.toFixed(4)); paint();
+    }
+    sl.style.cursor = "pointer"; sl.style.touchAction = "none";
+    sl.addEventListener("pointerdown", function (e) {
+      try { sl.setPointerCapture(e.pointerId); } catch (_) {}
+      fromPointer(e);
+      function mv(ev) { fromPointer(ev); }
+      function up() { sl.removeEventListener("pointermove", mv); sl.removeEventListener("pointerup", up); }
+      sl.addEventListener("pointermove", mv); sl.addEventListener("pointerup", up);
+    });
+    inp.addEventListener("change", function () {
+      var v = Number(inp.value);
+      if (isFinite(v)) { onChange(Math.max(p.min, Math.min(p.max, v))); paint(); }
+      else paint();
+    });
+    if (p.inputOnly) { /* number-only param: no rail, like the panel's inputOnly rows */ }
+    else wrap.appendChild(sl);
+    wrap.appendChild(inp); wrap.appendChild(unit);
+    wrap.__paint = paint; paint();
+    return wrap;
+  }
+  function enumRow(p, value, onChange) {
+    var wrap = el("div", "prow");
+    wrap.style.alignItems = "flex-start";
+    var lab = el("b"); lab.textContent = p.label;
+    wrap.appendChild(lab);
+    var chips = el("span", "mchips");
+    (p.options || []).forEach(function (o) {
+      var c = el("i", "mchip");
+      c.textContent = o.label;
+      if (o.value === value) c.className = "mchip on";
+      c.onclick = function () {
+        Array.prototype.forEach.call(chips.children, function (x) { x.classList.remove("on"); });
+        c.classList.add("on"); onChange(o.value);
+      };
+      chips.appendChild(c);
+    });
+    wrap.appendChild(chips);
+    return wrap;
+  }
+  function colorRow(p, value, onChange) {
+    var wrap = el("div", "prow");
+    var lab = el("b"); lab.textContent = p.label;
+    wrap.appendChild(lab);
+    var sw = el("span", "swatch");
+    sw.style.background = value; sw.style.cursor = "pointer";
+    sw.title = y("common.pickColor");
+    var hx = el("span"); hx.style.cssText = "font-family:ui-monospace,monospace;font-size:11px;";
+    hx.textContent = String(value).toUpperCase();
+    var ci = document.createElement("input");
+    ci.type = "color"; ci.value = value; ci.style.display = "none";
+    document.body.appendChild(ci);
+    sw.onclick = function () { ci.click(); };
+    ci.oninput = function () { onChange(ci.value); sw.style.background = ci.value; hx.textContent = ci.value.toUpperCase(); };
+    wrap.appendChild(sw); wrap.appendChild(hx);
+    return wrap;
+  }
+  function textRow(p, value, onChange) {
+    var wrap = el("div", "prow");
+    var lab = el("b"); lab.textContent = p.label;
+    wrap.appendChild(lab);
+    var inp = document.createElement("input");
+    inp.className = "mtxt"; inp.type = "text";
+    inp.maxLength = p.maxLength || 8; inp.spellcheck = false;
+    inp.placeholder = p.placeholder || "";
+    inp.value = value;
+    inp.oninput = function () { onChange(inp.value); };
+    wrap.appendChild(inp);
+    return wrap;
+  }
+  function paramRow(p, value, onChange) {
+    if (p.type === "number") return numRow(p, typeof value === "number" ? value : Number(p.default), onChange);
+    if (p.type === "enum") return enumRow(p, typeof value === "string" ? value : p.default, onChange);
+    if (p.type === "color") return colorRow(p, typeof value === "string" ? value : p.default, onChange);
+    return textRow(p, typeof value === "string" ? value : p.default, onChange);
+  }
+  function defaultsOf(params) {
+    var o = {};
+    (params || []).forEach(function (p) { o[p.id] = p.default; });
+    return o;
+  }
+
+  /* ---------- easing curve ---------- */
+  function springPath(freq, damping) {
+    var pts = [], lo = 0, hi = 1, b, v, i;
+    for (i = 0; i <= 200; i++) {
+      v = i / 200 * 1.4;
+      b = 1 - Math.exp(-damping * v) * Math.cos(freq * 2 * Math.PI * v);
+      if (b < lo) lo = b; if (b > hi) hi = b;
+    }
+    var pad = 0.1, lo2 = Math.min(0, lo) - pad, hi2 = Math.max(1, hi) + pad, d = "";
+    for (i = 0; i <= 200; i++) {
+      v = i / 200 * 1.4;
+      b = 1 - Math.exp(-damping * v) * Math.cos(freq * 2 * Math.PI * v);
+      d += (i ? " L" : "M") + (GX + v / 1.4 * GW).toFixed(1) + " " + (GY + (1 - (b - lo2) / (hi2 - lo2)) * GH).toFixed(1);
+    }
+    return d;
+  }
+  function drawCurve(box, preset, curve, onCurveChange) {
+    box.innerHTML = "";
+    var svg = svgEl("svg", { viewBox: "0 0 360 200", width: "100%", height: "150", preserveAspectRatio: "xMidYMid meet" });
+    svg.style.overflow = "visible";
+    var g, i;
+    for (i = 0; i <= 4; i++) { g = GX + GW / 4 * i; svg.appendChild(svgEl("line", { x1: g, x2: g, y1: GY, y2: GY + GH, stroke: "#3a3a3f", "stroke-width": 1, opacity: i === 0 || i === 4 ? .7 : .25 })); }
+    for (i = 0; i <= 4; i++) { g = GY + GH / 4 * i; svg.appendChild(svgEl("line", { x1: GX, x2: GX + GW, y1: g, y2: g, stroke: "#3a3a3f", "stroke-width": 1, opacity: i === 0 || i === 4 ? .7 : .25 })); }
+    var X = function (v) { return GX + v * GW; }, Y = function (v) { return GY + (1 - v) * GH; };
+
+    if (preset.type === "spring") {
+      svg.appendChild(svgEl("path", { d: springPath(preset.freq, preset.damping), fill: "none", stroke: "#feca08", "stroke-width": 2.5, "stroke-linecap": "round" }));
+    } else {
+      var c = curve || preset.curve;
+      var ax = X(0), ay = Y(0), bx = X(1), by = Y(1);
+      /* the four pieces that move while a handle is dragged; they are updated
+         in place so the SVG is never destroyed mid-drag (which would break
+         pointer capture). A full render() happens only on pointerup. */
+      var l1 = svgEl("line", { stroke: "#717171", "stroke-dasharray": "3 3" });
+      var l2 = svgEl("line", { stroke: "#717171", "stroke-dasharray": "3 3" });
+      var path = svgEl("path", { fill: "none", stroke: "#feca08", "stroke-width": 2.5, "stroke-linecap": "round" });
+      svg.appendChild(l1); svg.appendChild(l2); svg.appendChild(path);
+      svg.appendChild(svgEl("circle", { cx: ax, cy: ay, r: 3, fill: "#f2f2f0" }));
+      svg.appendChild(svgEl("circle", { cx: bx, cy: by, r: 3, fill: "#f2f2f0" }));
+      var parts = [1, 2].map(function () {
+        var hit = svgEl("circle", { r: 12, fill: "transparent", style: "cursor:grab;touch-action:none" });
+        var dot = svgEl("circle", { r: 5, fill: "#feca08", stroke: "#f2f2f0", "stroke-width": 2, "pointer-events": "none" });
+        svg.appendChild(hit); svg.appendChild(dot);
+        return { hit: hit, dot: dot };
+      });
+      function applyCurve(nc) {
+        c = nc;
+        l1.setAttribute("x1", ax); l1.setAttribute("y1", ay);
+        l1.setAttribute("x2", X(nc.x1)); l1.setAttribute("y2", Y(nc.y1));
+        l2.setAttribute("x1", bx); l2.setAttribute("y1", by);
+        l2.setAttribute("x2", X(nc.x2)); l2.setAttribute("y2", Y(nc.y2));
+        path.setAttribute("d", "M " + ax + " " + ay + " C " + X(nc.x1) + " " + Y(nc.y1) + " " + X(nc.x2) + " " + Y(nc.y2) + " " + bx + " " + by);
+        [[nc.x1, nc.y1], [nc.x2, nc.y2]].forEach(function (pt, k) {
+          parts[k].hit.setAttribute("cx", X(pt[0])); parts[k].hit.setAttribute("cy", Y(pt[1]));
+          parts[k].dot.setAttribute("cx", X(pt[0])); parts[k].dot.setAttribute("cy", Y(pt[1]));
+        });
+      }
+      applyCurve(c);
+      parts.forEach(function (part, k) {
+        part.hit.addEventListener("pointerdown", function (e) {
+          e.preventDefault();
+          try { part.hit.setPointerCapture(e.pointerId); } catch (_) {}
+          function mv(ev) {
+            var r = svg.getBoundingClientRect();
+            var sc = Math.min(r.width / 360, r.height / 200);
+            var px = (ev.clientX - r.left - (r.width - 360 * sc) / 2) / sc;
+            var py = (ev.clientY - r.top - (r.height - 200 * sc) / 2) / sc;
+            var nx = Math.max(0, Math.min(1, (px - GX) / GW));
+            var ny = Math.max(-1, Math.min(2, (GY - py) / GH));
+            applyCurve(k === 0 ? { x1: +nx.toFixed(3), y1: +ny.toFixed(3), x2: c.x2, y2: c.y2 }
+                               : { x1: c.x1, y1: c.y1, x2: +nx.toFixed(3), y2: +ny.toFixed(3) });
+          }
+          function up(ev) {
+            part.hit.removeEventListener("pointermove", mv);
+            part.hit.removeEventListener("pointerup", up);
+            try { part.hit.releasePointerCapture(ev.pointerId); } catch (_) {}
+            if (onCurveChange) onCurveChange(c);
+          }
+          part.hit.addEventListener("pointermove", mv);
+          part.hit.addEventListener("pointerup", up);
+        });
+      });
+    }
+    box.appendChild(svg);
+  }
+
+  /* ---------- stage helpers ---------- */
+  function stage(html, minH) {
+    var s = el("div", "mstage", html);
+    if (minH) s.style.minHeight = minH + "px";
+    return s;
+  }
+  function replayBtn(label, fn) {
+    var b = el("span", "mcopy");
+    b.textContent = label; b.style.cssText += "font-size:11px;padding:4px 13px;";
+    b.onclick = fn;
+    return b;
+  }
+  function section(title, node, bare) {
+    var w = el("div");
+    w.style.margin = "14px 0 0";
+    if (!bare) { var c = el("p", "mcap"); c.textContent = title; w.appendChild(c); }
+    w.appendChild(node);
+    return w;
+  }
+
+  /* =========================================================
+     VIEWS — one per tab, each mirroring the real panel
+     ========================================================= */
+  var VIEWS = [
+
+    /* --- Easing: curve editor + Details + spring/bezier footer --- */
+    function (p, st) {
+      var edited = st.values.__curve !== null && st.values.__curve !== undefined;
+      var head = el("div");
+      head.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;";
+      var cap = el("p", "mcap"); cap.textContent = y("easing.curve"); cap.style.margin = "0";
+      head.appendChild(cap);
+      if (edited) {
+        var reset = el("span", "mcopy");
+        reset.textContent = y("easing.resetTo") + " " + p.label;
+        reset.onclick = function () { st.values.__curve = null; render(); };
+        head.appendChild(reset);
+      }
+      main.appendChild(head);
+      var box = el("div", "mock-curve");
+      main.appendChild(box);
+      drawCurve(box, p, st.values.__curve, function (c) { st.values.__curve = c; render(); });
+
+      var h = el("div", "mhead");
+      h.style.marginTop = "12px";
+      h.innerHTML = "<h4>" + p.label + (edited ? ' <span class="mbadge">' + y("easing.edited") + "</span>" : "") + "</h4><p>" + p.description + "</p>";
+      main.appendChild(h);
+
+      /* Details: cubic-bezier readout, or the spring's damping + frequency */
+      var det = el("div");
+      det.style.marginTop = "12px";
+      var dc = el("p", "mcap"); dc.textContent = y("common.details"); det.appendChild(dc);
+      if (p.type === "spring") {
+        det.appendChild(el("div", "mdetail", "<span>" + y("easing.damping") + "</span><span>" + p.damping + "</span>"));
+        det.appendChild(el("div", "mdetail", "<span>" + y("easing.frequency") + "</span><span>" + p.freq + " Hz</span>"));
+      } else {
+        var c = st.values.__curve || p.curve;
+        det.appendChild(el("div", "mdetail", "<span>cubic-bezier</span><span>" + [c.x1, c.y1, c.x2, c.y2].map(V).join(", ") + "</span>"));
+        if (edited) det.appendChild(el("p", "mhint", y("easing.dragHint")));
+      }
+      main.appendChild(det);
+
+      applyState = {
+        foot: p.type === "spring" ? y("easing.footer.spring") : y("easing.footer.bezier"),
+        label: y("action.apply"),
+        title: y("easing.applyTitle"),
+        run: function () {
+          toast(p.type === "spring"
+            ? y("common.applied") + " " + p.label + " \u2014 " + en(4, "prop")
+            : y("common.applied") + " " + p.label + " \u2014 " + en(8, "key"));
+        }
+      };
+    },
+
+    /* --- Text: live preview + Replay + per-preset parameters --- */
+    function (p, st) {
+      main.appendChild(head(p));
+      var s = stage('<div class="tx">Pineapple</div>', 170);
+      main.appendChild(section(y("common.livePreview"), s, true));
+
+      function play() {
+        var t = s.querySelector(".tx"); if (!t) return;
+        var label = (p.label + " " + p.subtitle).toLowerCase();
+        var anim = /type|scramble/.test(label) ? "mType" : /bounce|burst|elastic|soft/.test(label) ? "mBounce" : /fade/.test(label) ? "mFade" : "mSlideUp";
+        var mono = /type|scramble/.test(label);
+        t.style.fontFamily = mono ? "ui-monospace,monospace" : "inherit";
+        t.style.overflow = mono ? "hidden" : "visible";
+        t.style.whiteSpace = mono ? "nowrap" : "normal";
+        t.style.setProperty("--dist", (st.values.distance || 60) + "px");
+        t.style.animation = "none"; void t.offsetWidth;
+        t.style.animation = anim + " " + (st.values.duration || .9) + "s cubic-bezier(.3,1.3,.4,1) both";
+      }
+      var rw = el("div");
+      rw.style.cssText = "display:flex;justify-content:flex-end;margin-top:10px;";
+      rw.appendChild(replayBtn(y("common.replay"), play));
+      main.appendChild(rw);
+
+      main.appendChild(section(y("common.parameters"), paramsBlock(p, st)));
+      play();
+
+      applyState = {
+        foot: y("text.footer.in"),
+        label: y("action.apply"),
+        run: function () { toast(y("common.applied") + " " + p.label + " \u2014 " + en(1, "layer")); }
+      };
+    },
+
+    /* --- Transitions: preview at the playhead + duration --- */
+    function (p, st) {
+      main.appendChild(head(p, y("transitions.atPlayhead")));
+      var s = stage('<div id="mCard" style="background:linear-gradient(135deg,#feca08,#ff8a3d);border-radius:12px;padding:20px 32px;font-weight:800;color:#241a04;">Pineapple</div>', 170);
+      main.appendChild(section(y("common.livePreview"), s, true));
+      var rw = el("div");
+      rw.style.cssText = "display:flex;justify-content:flex-end;margin-top:10px;";
+      rw.appendChild(replayBtn(y("common.replay"), play));
+      main.appendChild(rw);
+      function play() {
+        var card = s.querySelector("#mCard"); if (!card || !card.animate) return;
+        var label = p.label.toLowerCase();
+        var keyframes = /spin/.test(label) ? [{ opacity: 0, transform: "rotate(-90deg) scale(.6)" }, { opacity: 1, transform: "none" }]
+          : /blur/.test(label) ? [{ opacity: 0, filter: "blur(14px)" }, { opacity: 1, filter: "blur(0)" }]
+          : /iris/.test(label) ? [{ opacity: 0, transform: "scale(.2)" }, { opacity: 1, transform: "none" }]
+          : /side|slide/.test(label) ? [{ opacity: 0, transform: "translateX(-46px)" }, { opacity: 1, transform: "none" }]
+          : /rise/.test(label) ? [{ opacity: 0, transform: "translateY(42px)" }, { opacity: 1, transform: "none" }]
+          : [{ opacity: 0 }, { opacity: 1 }];
+        var ms = (st.values.duration || .6) * 1000;
+        var an = card.animate(keyframes, { duration: ms, easing: "cubic-bezier(.3,1.3,.4,1)", fill: "forwards" });
+        if (an && an.finished) an.finished.then(function () { setTimeout(function () { card.animate([{ opacity: 1 }], { duration: 1, fill: "forwards" }); }, 400); });
+      }
+      main.appendChild(section(y("common.parameters"), paramsBlock(p, st)));
+      play();
+
+      applyState = {
+        foot: y("transitions.footer"),
+        label: y("action.apply"),
+        run: function () { toast(y("common.applied") + " " + p.label + " \u2014 " + en(1, "layer")); }
+      };
+    },
+
+    /* --- Glass: refracting card + rig parameters + Insert --- */
+    function (p, st) {
+      main.appendChild(head(p));
+      var s = stage('<div id="mFrost" style="padding:24px 38px;font-weight:800;font-size:20px;color:#fff;border-radius:16px;">Glass</div>', 170);
+      s.classList.add("mglassbg");
+      main.appendChild(section(y("common.livePreview"), s, true));
+      function paint() {
+        var f = s.querySelector("#mFrost"); if (!f) return;
+        var v = st.values;
+        var blur = (v.blur !== undefined ? v.blur : 18);
+        var sat = (v.saturation !== undefined ? v.saturation : 150);
+        var tint = v.tint || "#88c0ff";
+        f.style.background = tint.replace(")", "") && /^#/.test(tint) ? hexA(tint, .22) : "rgba(255,255,255,.14)";
+        f.style.backdropFilter = "blur(" + blur + "px) saturate(" + sat + "%)";
+        f.style.webkitBackdropFilter = f.style.backdropFilter;
+        f.style.border = "1px solid rgba(255,255,255,.35)";
+        f.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.4), 0 8px 24px rgba(0,0,0,.25)";
+      }
+      function hexA(hex, a) {
+        var t = hex.replace("#", "");
+        if (t.length === 3) t = t.split("").map(function (c) { return c + c; }).join("");
+        var r = parseInt(t.slice(0, 2), 16), g = parseInt(t.slice(2, 4), 16), b = parseInt(t.slice(4, 6), 16);
+        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+      }
+      main.appendChild(section(y("common.parameters"), paramsBlock(p, st, paint)));
+      paint();
+
+      applyState = {
+        foot: y("glass.footer.hasComp"),
+        label: y("glass.insert"),
+        run: function () { toast(y("glass.added") + " " + p.label + " " + y("glass.toComp")); }
+      };
+    },
+
+    /* --- Styles: graded art + style parameters --- */
+    function (p, st) {
+      main.appendChild(head(p));
+      var s = stage('<div id="mArt" class="mart" style="width:220px;height:120px;border-radius:12px;"></div>', 170);
+      main.appendChild(section(y("common.livePreview"), s, true));
+      var label = (p.label + " " + p.subtitle).toLowerCase();
+      function filter() {
+        var a = s.querySelector("#mArt"); if (!a) return;
+        var x = (st.values.intensity !== undefined ? st.values.intensity : 70) / 100;
+        var d = st.values.distance !== undefined ? st.values.distance : 12;
+        var soft = st.values.softness !== undefined ? st.values.softness : 35;
+        var op = st.values.opacity !== undefined ? st.values.opacity : 30;
+        if (/glow|sweep|streak|light/.test(label)) a.style.filter = "saturate(" + (1 + .3 * x) + ") brightness(" + (1 + .18 * x) + ")";
+        else if (/duotone|tint/.test(label)) a.style.filter = "grayscale(.75) sepia(" + x + ") hue-rotate(" + (-14 * x * 10) + "deg)";
+        else if (/saturation/.test(label)) a.style.filter = "saturate(" + (1 + x) + ")";
+        else if (/shadow|hairline|highlight/.test(label)) a.style.filter = "contrast(" + (1 + .22 * x) + ") drop-shadow(0 " + (d / 4) + "px " + (soft / 3) + "px rgba(0,0,0," + (op / 100) + "))";
+        else a.style.filter = "sepia(" + (.7 * x) + ") saturate(" + (1 + x) + ") contrast(" + (1 + .3 * x) + ")";
+      }
+      main.appendChild(section(y("common.parameters"), paramsBlock(p, st, filter)));
+      filter();
+
+      applyState = {
+        foot: y("styles.footer.other"),
+        label: y("action.apply"),
+        run: function () { toast(y("common.applied") + " " + p.label + " \u2014 " + en(1, "layer")); }
+      };
+    },
+
+    /* --- Expressions: live preview + the panel's own generated code --- */
+    function (p, st) {
+      main.appendChild(head(p));
+      var s = stage('<div class="tx" style="font-size:28px;">Pineapple</div>', 130);
+      main.appendChild(section(y("common.livePreview"), s, true));
+
+      /* Live code — generated by the preset's real `generate` source */
+      var code = "";
+      try {
+        var gen = new Function("V", "O", "uc", "return (" + p.generateSrc + ");")(V, O, uc);
+        code = gen(st.values);
+      } catch (e) { code = ""; }
+      if (!code && p.signature) code = "// " + p.label + "\n" + p.signature + ";";
+      var pre = el("pre", "mpre"); pre.textContent = code;
+      var headWrap = el("div", "mcodehead");
+      headWrap.innerHTML = '<span class="mcap" style="margin:0;">' + y("expr.liveCode") + "</span>";
+      var cp = el("span", "mcopy"); cp.textContent = "Copy";
+      cp.onclick = function () { copyText(pre.textContent, "Expression copied."); };
+      headWrap.appendChild(cp);
+      var codeWrap = el("div"); codeWrap.style.marginTop = "14px";
+      codeWrap.appendChild(headWrap); codeWrap.appendChild(pre);
+      main.appendChild(codeWrap);
+
+      /* Target property */
+      var tgt = el("div");
+      tgt.style.marginTop = "14px";
+      tgt.appendChild(el("p", "mcap", y("expr.target")));
+      var chips = el("div", "mchips");
+      var targets = ["auto"].concat(D.targets || []);
+      targets.forEach(function (t) {
+        var c = el("i", "mchip");
+        c.textContent = t === "auto" ? y("expr.auto") : t.replace(/^ADBE /, "");
+        if ((st.values.__target || "auto") === t) c.className = "mchip on";
+        c.onclick = function () {
+          st.values.__target = t;
+          Array.prototype.forEach.call(chips.children, function (x) { x.classList.remove("on"); });
+          c.classList.add("on");
+          applyState.foot = t === "auto" ? y("expr.footer.auto") : y("expr.footer.target") + " " + t.replace(/^ADBE /, "") + ".";
+          if (footEl) footEl.textContent = applyState.foot;
+        };
+        chips.appendChild(c);
+      });
+      tgt.appendChild(chips);
+      main.appendChild(tgt);
+
+      if (p.params && p.params.length) main.appendChild(section(y("common.parameters"), paramsBlock(p, st, function () { render(); })));
+
+      applyState = {
+        foot: y("expr.footer.auto"),
+        label: y("action.apply"),
+        run: function () { toast(y("common.applied") + " " + p.label + " \u2014 " + en(1, "prop")); }
+      };
+    },
+
+    /* --- Numbers: animated counter + Format + the real AE expression --- */
+    function (p, st) {
+      main.appendChild(head(p));
+      var s = stage('<div id="mNum" style="font-family:ui-monospace,monospace;font-size:44px;font-weight:800;color:#feca08;">0</div>', 150);
+      main.appendChild(section(y("common.livePreview"), s, true));
+
+      var fmt = st.values;
+      function run() {
+        var node = s.querySelector("#mNum"); if (!node) return;
+        var from = st.values.reverse === "on" ? st.values.end : st.values.start;
+        var to = st.values.reverse === "on" ? st.values.start : st.values.end;
+        var dur = (st.values.duration || 2) * 1000, t0 = null;
+        function frame(t) {
+          if (t0 === null) t0 = t;
+          var e = Y1(t - t0, dur, st.values.ease || "ease");
+          node.textContent = pl(from + (to - from) * e, fmt);
+          if (t - t0 < dur) requestAnimationFrame(frame);
+        }
+        if (window.requestAnimationFrame) requestAnimationFrame(frame);
+        else node.textContent = pl(to, fmt);
+      }
+      var rw = el("div");
+      rw.style.cssText = "display:flex;justify-content:flex-end;margin-top:10px;";
+      rw.appendChild(replayBtn(y("common.replay"), run));
+      main.appendChild(rw);
+
+      main.appendChild(section(y("numbers.format"), paramsBlock(D.viewParams.numbers, st, run)));
+      var pre = el("pre", "mpre"); pre.textContent = bf(fmt);
+      var codeWrap = el("div"); codeWrap.style.marginTop = "14px";
+      var headWrap = el("div", "mcodehead");
+      headWrap.innerHTML = '<span class="mcap" style="margin:0;">' + y("numbers.expression") + "</span>";
+      var cp = el("span", "mcopy"); cp.textContent = "Copy";
+      cp.onclick = function () { copyText(pre.textContent, "Expression copied."); };
+      headWrap.appendChild(cp);
+      codeWrap.appendChild(headWrap); codeWrap.appendChild(pre);
+      main.appendChild(codeWrap);
+      run();
+
+      applyState = {
+        foot: y("numbers.footer"),
+        label: y("action.apply"),
+        run: function () { toast(y("numbers.applied") + " " + en(1, "layer")); run(); }
+      };
+    },
+
+    /* --- Devices: the real frame + Frame parameters + Insert --- */
+    function (p, st) {
+      var h = el("div", "mhead");
+      h.innerHTML = "<h4>" + p.label + ' <span style="font-family:ui-monospace,monospace;font-size:10px;color:var(--mock-dim);font-weight:400;">'
+        + p.screenW + " \u00d7 " + p.screenH + " \u00b7 r" + p.screenRadius + "</span></h4><p>" + p.description + "</p>";
+      main.appendChild(h);
+
+      var box = el("div", "mock-curve");
+      box.style.cssText += "display:flex;align-items:center;justify-content:center;padding:20px 0;";
+      main.appendChild(section(y("devices.frame"), box, true));
+
+      function paint() {
+        box.innerHTML = "";
+        var maxH = 250, scale = maxH / p.screenH;
+        var w = p.screenW * scale, hgt = maxH;
+        var bezel = (st.values.bezel !== undefined ? st.values.bezel : p.bezel) * scale;
+        var round = (st.values.roundness !== undefined ? st.values.roundness : 60) / 100;
+        var bodyR = (p.screenRadius + (st.values.bezel !== undefined ? st.values.bezel : p.bezel)) * scale * (0.4 + round * 0.9);
+        var screenR = p.screenRadius * scale * (0.4 + round * 0.9);
+        var iw = (st.values.islandW !== undefined ? st.values.islandW : (p.island ? p.island.width : 0)) * scale;
+        var ih = (st.values.islandH !== undefined ? st.values.islandH : (p.island ? p.island.height : 0)) * scale;
+        var itop = (st.values.islandTop !== undefined ? st.values.islandTop : (p.island ? p.island.top : 0)) * scale;
+        var irad = (p.island ? p.island.radius : 12) * scale * (0.4 + round * 0.9);
+
+        var outer = el("div", "mphone");
+        outer.style.cssText = "width:" + (w + bezel * 2) + "px;height:" + (hgt + bezel * 2) + "px;border-radius:" + bodyR + "px;padding:" + bezel + "px;box-shadow:0 18px 40px rgba(0,0,0,.5);";
+        var scr = el("div", "mscreen");
+        scr.style.cssText = "inset:" + bezel + "px;border-radius:" + screenR + "px;background:linear-gradient(160deg,#2f6bff,#b14cff 55%,#ff5d7a);";
+        if (p.island && iw > 0) {
+          var isl = el("div", "misland");
+          isl.style.cssText = "width:" + iw + "px;height:" + ih + "px;border-radius:" + irad + "px;top:" + itop + "px;";
+          scr.appendChild(isl);
+        }
+        var time = el("div");
+        time.style.cssText = "position:absolute;top:" + (itop + ih + 4) + "px;left:0;right:0;text-align:center;color:#fff;font-size:10px;font-weight:700;";
+        time.textContent = "9:41";
+        scr.appendChild(time);
+        outer.appendChild(scr);
+        box.appendChild(outer);
+      }
+      var fp = (D.viewParams.devices || []).filter(function (x) { return p.island || !/^island/.test(x.id); });
+      main.appendChild(section(y("common.parameters"), paramsBlock(fp, st, paint)));
+      paint();
+
+      applyState = {
+        foot: y("devices.footer.hasComp") + " " + (p.screenW * p.pixelScale) + "\u00d7" + (p.screenH * p.pixelScale) + " " + y("devices.footer.oneToOne"),
+        label: y("glass.insert"),
+        run: function () { toast(y("glass.added") + " " + p.label + " Screen precomp"); }
+      };
+    },
+
+    /* --- Tools: what it does, its parameters, its own action button --- */
+    function (p, st) {
+      var h = el("div", "mhead");
+      h.innerHTML = "<h4>" + p.label + "</h4><p>" + p.subtitle + "</p><p>" + p.description + "</p>";
+      main.appendChild(h);
+      if (p.params && p.params.length) main.appendChild(section(y("common.parameters"), paramsBlock(p, st)));
+
+      applyState = {
+        foot: y("tools.openCompAnd") + " " + String(p.requirement || "").toLowerCase(),
+        label: p.actionLabel || y("action.apply"),
+        run: function () { toast(p.label + " \u2014 " + en(1, "layer")); }
+      };
+    }
+  ];
+
+  /* ---------- shared view pieces ---------- */
+  function head(p, badge) {
+    var h = el("div", "mhead");
+    h.innerHTML = "<h4>" + p.label + (badge ? ' <span class="mbadge">' + badge + "</span>" : "") + "</h4><p>" + p.description + "</p>";
+    return h;
+  }
+  /* Accepts either a param array (view-level lists) or a preset object. */
+  function paramsBlock(src, st, onChange) {
+    var wrap = el("div", "mock-params");
+    var list = Object.prototype.toString.call(src) === "[object Array]" ? src : ((src && src.params) || []);
+    list.forEach(function (p) {
+      if (st.values[p.id] === undefined) st.values[p.id] = p.default;
+      wrap.appendChild(paramRow(p, st.values[p.id], function (v) {
+        st.values[p.id] = v;
+        if (onChange) onChange(v);
+      }));
+    });
+    return wrap;
+  }
+
+  /* ---------- shell: pills, list, main, footer ---------- */
+  function presetsOf(i) { return D.presets[D.tabs[i].id] || []; }
+
+  function renderPills() {
+    root.innerHTML = "";
+    D.tabs.forEach(function (t, i) {
+      var k = el("i");
+      k.textContent = t.label;
+      if (i === cur.tab) k.className = "on";
+      k.onclick = function () { select(i, 0); };
+      root.appendChild(k);
+    });
+  }
+  function renderList() {
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    presetsOf(cur.tab).forEach(function (p, i) {
+      var it = el("i");
+      it.innerHTML = "<span>" + p.label + '</span><span class="msub">' + (p.subtitle || "") + "</span>";
+      if (i === cur.idx) it.className = "on";
+      it.onclick = function () { select(cur.tab, i); };
+      listEl.appendChild(it);
+    });
+  }
+  function render() {
+    var all = presetsOf(cur.tab);
+    var p = all[cur.idx];
+    if (!p) { main.innerHTML = ""; applyState = null; paintFoot(); return; }
+    /* parameter values live per preset and reset when the selection changes */
+    var key = D.tabs[cur.tab].id + ":" + p.id;
+    if (!vals[key]) {
+      var base = D.tabs[cur.tab].id === "numbers" ? (D.viewParams.numbers || []) : (p.params || []);
+      /* defaults, then the template's own overrides on top — same as the panel */
+      vals[key] = defaultsOf(base);
+      if (p.overrides) for (var k in p.overrides) vals[key][k] = p.overrides[k];
+      vals[key].__target = "auto";
+    }
+    main.innerHTML = "";
+    applyState = null;
+    VIEWS[cur.tab](p, { values: vals[key] });
+    paintFoot();
+  }
+  function paintFoot() {
+    if (footEl) footEl.textContent = applyState ? applyState.foot : "";
+    if (!applyEl) return;
+    applyEl.textContent = applyState ? applyState.label : y("action.apply");
+    applyEl.title = (applyState && applyState.title) || "";
+    applyEl.style.opacity = applyState ? "1" : ".45";
+  }
+  function select(tab, idx) {
+    cur.tab = tab; cur.idx = idx;
+    renderPills(); renderList(); render();
+  }
+
+  if (applyEl) {
+    applyEl.style.cursor = "pointer";
+    applyEl.onclick = function () { if (applyState && applyState.run) applyState.run(); };
+  }
+  select(0, 0);
+})();

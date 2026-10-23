@@ -67,33 +67,16 @@
   <div class="mock">
     <div class="mock-bar">
       <img src="./assets/logo.png" alt="" /><span class="mock-title">Pineapple<span>FX</span></span><span class="mock-pro">PRO</span>
-      <div class="mock-pills" id="mPills"><i class="on">Easing</i><i>Text</i><i>Transitions</i><i>Glass</i><i>Styles</i><i>Expressions</i><i>Numbers</i><i>Devices</i><i>Tools</i></div>
+      <div class="mock-pills" id="mPills"></div>
       <span class="mock-dots">● ● ●</span>
     </div>
     <div class="mock-body">
-      <div class="mock-list" id="mList"><i class="on">Apple Standard</i><i>Emphasized</i><i>Decelerated</i><i>Spring · Soft</i><i>Spring · Bouncy</i><i>Snap</i><i>Anticipate</i><i>Bouncy</i></div>
-      <div class="mock-main">
-        <div class="mock-curve" id="mCurve">
-          <svg viewBox="0 0 360 150" width="100%" height="120" preserveAspectRatio="xMidYMid meet">
-            <g stroke="#3a3a3f" stroke-width="1"><line x1="20" y1="20" x2="20" y2="130"/><line x1="20" y1="130" x2="340" y2="130"/></g>
-            <line x1="20" y1="130" x2="110" y2="130" stroke="#717171" stroke-dasharray="3 3"/>
-            <line x1="340" y1="30" x2="250" y2="30" stroke="#717171" stroke-dasharray="3 3"/>
-            <path d="M 20 130 C 110 130 140 30 340 30" fill="none" stroke="#feca08" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="110" cy="130" r="5" fill="#feca08"/><circle cx="250" cy="30" r="5" fill="#feca08"/>
-            <circle cx="20" cy="130" r="4" fill="#f2f2f0"/><circle cx="340" cy="30" r="4" fill="#f2f2f0"/>
-          </svg>
-        </div>
-        <div style="margin:12px 2px 0;font-size:12.5px;"><b id="mName" style="color:#f2f2f0;"></b> <span id="mFormula" style="color:#a9a9a4;font-family:monospace;font-size:11px;"></span></div>
-        <div class="mock-params">
-          <div class="prow"><b>Direction</b><span class="seg" id="mSeg"><i class="on">In</i><i>Out</i></span></div>
-          <div class="prow"><b>Duration</b><span class="mslider" id="mDurS" style="--f:55%"></span><span id="mDurV">1.50 s</span></div>
-          <div class="prow"><b>Color</b><span class="swatch" id="mSw"></span><span id="mHex">#FECA08</span></div>
-          <div class="prow"><b>Blur</b><span class="mslider" id="mBlurS" style="--f:35%"></span><span id="mBlurV">21 px</span></div>
-        </div>
-      </div>
+      <div class="mock-list" id="mList"></div>
+      <div class="mock-main" id="mMain"></div>
     </div>
-    <div class="mock-foot"><span>PineappleFX 2.0.0 · After Effects</span><span class="apply" id="mApply">Apply</span></div>
+    <div class="mock-foot"><span id="mFoot"></span><span class="apply" id="mApply">Apply</span></div>
   </div>
+  <noscript><p class="sec-sub">The live panel preview needs JavaScript enabled.</p></noscript>
 </div></section>
 
 <section class="alt"><div class="wrap">
@@ -143,6 +126,7 @@
 </div>
 
 <script src="./assets/pfx-core.js"></script>
+<script src="./assets/pfx-panel-data.js"></script>
 <script src="./assets/pfx-preview.js"></script>
 </body>
 </html>
