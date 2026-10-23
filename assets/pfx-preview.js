@@ -451,7 +451,21 @@
     /* --- Text: live preview + Replay + per-preset parameters --- */
     function (p, st) {
       main.appendChild(head(p));
-      var s = stage('<div class="tx">Pineapple</div>', 170);
+      /* Per-preset demo copy. Showing the same word for all 25 effects makes
+         the previews look dead — each one now demos copy that suits it. */
+      var TEXT_DEMOS = {
+        "hero-reveal": "PineappleFX", "slide-up": "PineappleFX", "slide": "PineappleFX",
+        "scale-bounce": "Boom.", "color-scale": "Colorful", "skew-color": "Skewed",
+        "word-stagger": "Word by word", "letter-stagger": "Letter by letter",
+        "word-bounce": "Bouncy words", "burst": "Burst", "typewriter": "Typing...",
+        "bounce-up": "Up we go", "bounce-rotate": "Twist", "soft-bounce": "Softly",
+        "iris": "Iris", "number-counter": "100", "elastic-in": "Elastic",
+        "scramble": "Xk#9Pineapple", "fade-chars": "Fade in", "fade-words": "Fade words",
+        "rise-chars": "Rise", "drop-chars": "Drop", "scale-chars": "Scale",
+        "spin-chars": "Spin", "blur-words": "Blurred"
+      };
+      var demoText = TEXT_DEMOS[p.id] || "PineappleFX";
+      var s = stage('<div class="tx">' + demoText + "</div>", 170);
       main.appendChild(section(y("common.livePreview"), s, true));
 
       function play() {
@@ -740,6 +754,18 @@
     }
   ];
 
+  /* VIEWS is positional against D.tabs; look views up by tab id so hiding a
+     tab cannot shift the wrong view into place. */
+  var VIEW_BY_ID = {
+    easing: VIEWS[0], text: VIEWS[1], transitions: VIEWS[2], glass: VIEWS[3],
+    styles: VIEWS[4], expressions: VIEWS[5], numbers: VIEWS[6], devices: VIEWS[7],
+    tools: VIEWS[8]
+  };
+  /* Tabs hidden from the website's preview. The plugin itself still ships
+     every tab — this only trims what the marketing page shows. */
+  var HIDDEN_TABS = { expressions: true };
+  function tabVisible(t) { return !HIDDEN_TABS[t.id]; }
+
   /* ---------- shared view pieces ---------- */
   function head(p, badge) {
     var h = el("div", "mhead");
@@ -766,6 +792,7 @@
   function renderPills() {
     root.innerHTML = "";
     D.tabs.forEach(function (t, i) {
+      if (!tabVisible(t)) return;
       var k = el("i");
       k.textContent = t.label;
       if (i === cur.tab) k.className = "on";
@@ -799,7 +826,8 @@
     }
     main.innerHTML = "";
     applyState = null;
-    VIEWS[cur.tab](p, { values: vals[key] });
+    var view = VIEW_BY_ID[D.tabs[cur.tab].id];
+    if (view) view(p, { values: vals[key] });
     paintFoot();
   }
   function paintFoot() {
@@ -818,5 +846,31 @@
     applyEl.style.cursor = "pointer";
     applyEl.onclick = function () { if (applyState && applyState.run) applyState.run(); };
   }
+  /* ---- "Experience the full panel": the preview stays compact so the page
+     keeps its Apple-style rhythm, and opens up on demand. ---- */
+  (function () {
+    var shell = document.getElementById("mockShell");
+    var btn = document.getElementById("mockExpand");
+    if (!shell || !btn) return;
+    var lbl = btn.querySelector(".lbl");
+    function paint() {
+      var open = shell.classList.contains("is-expanded");
+      if (lbl) lbl.textContent = open ? "Back to the compact view" : "Experience the full panel";
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    btn.setAttribute("aria-controls", "mockShell");
+    btn.onclick = function () {
+      var open = shell.classList.toggle("is-expanded");
+      shell.classList.toggle("is-collapsed", !open);
+      paint();
+      if (open) {
+        var r = shell.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > window.innerHeight) {
+          shell.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    };
+    paint();
+  })();
   select(0, 0);
 })();

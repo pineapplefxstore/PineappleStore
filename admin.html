@@ -114,6 +114,23 @@
     <div id="adminUsers"></div>
     <button class="mini-btn" id="adminExport" type="button" style="margin-top:6px;">⬇ Export backup (JSON)</button>
   </div>
+  <div class="lic-form" style="margin-top:12px;">
+    <b>🛠 Make a key by hand</b>
+    <p style="font-size:13px;color:var(--label-2);">Backup tool: paste the buyer's Machine ID (the 8 characters their panel shows) and get a working key on the spot — no payment, no email needed. Uses the server when it is connected, and mints locally when it is not.</p>
+    <label for="mkEmail" style="display:block;margin-top:10px;">Buyer email (optional)<input id="mkEmail" type="email" autocomplete="off" placeholder="buyer@example.com" /></label>
+    <label for="mkMachine" style="display:block;">Machine ID<input id="mkMachine" class="mono" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABCD1234" style="text-transform:uppercase;" /></label>
+    <p style="font-size:12px;color:var(--label-3);margin:6px 0 0;">The buyer opens their locked PineappleFX panel and reads it from the line that says <b>Computer ID</b>.</p>
+    <button class="btn btn-pay" id="mkCreate" type="button" style="width:100%;margin-top:10px;">Make key</button>
+    <p class="auth-err" id="mkErr" style="min-height:18px;"></p>
+    <div id="mkResult" style="display:none;">
+      <div class="keyline-big" id="mkKey"></div>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button class="mini-btn" id="mkCopy" type="button">Copy key</button>
+        <button class="mini-btn" id="mkReveal" type="button">Reveal / hide</button>
+      </div>
+      <p id="mkWhere" style="font-size:12px;color:var(--label-3);margin-top:8px;"></p>
+    </div>
+  </div>
 </div></section>
 
 <section id="adminLocked"><div class="wrap" style="max-width:640px">
@@ -123,7 +140,7 @@
     <p style="font-size:13.5px;color:var(--label-2);">Only the shop owner can see this page. Log in with the owner email to continue.</p>
     <div style="max-width:340px;margin:16px auto 0;text-align:left;" class="admin-form">
       <label for="adminLockedEmail">Owner email<input id="adminLockedEmail" type="email" value="pineapplefx.store@gmail.com" readonly style="opacity:.8;" /></label>
-      <label for="adminLockedPass">Owner password<input id="adminLockedPass" type="password" autocomplete="current-password" placeholder="PineappleAdmin2026!" /></label>
+      <label for="adminLockedPass">Owner password<input id="adminLockedPass" type="password" autocomplete="current-password" placeholder="Your admin password" /></label>
       <button class="btn btn-pay" id="adminLockedSubmit" type="button" style="width:100%;">Connect &amp; Open Panel</button>
       <p class="auth-err" id="adminLockedErr" style="min-height:18px;text-align:center;"></p>
     </div>
@@ -178,6 +195,7 @@
 </div>
 
 <script src="./assets/pfx-core.js"></script>
+<script src="./assets/pfx-licensing.js"></script>
 <script src="./assets/pfx-admin.js"></script>
 <script src="./assets/pfx-affiliates.js"></script>
 <script>

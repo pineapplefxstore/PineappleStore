@@ -11,6 +11,33 @@
     return p;
   }
 
+  /* ---- Admin-only local key mint (backup when the server is down) ----
+     Deliberately lives here (admin.html only) and NOT in pfx-licensing.js,
+     which loads on the public storefront — exposing a mint helper there would
+     let any visitor generate working keys from the browser console.
+     Same FNV-1a scheme as the panel gate, so minted keys unlock the panel. */
+  var ADMIN_MINT_SECRET = "7c795771be81002adee1870b7dfbc589";
+  var MINT_ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  function mintFnv(str){
+    var h = 0x811c9dc5;
+    for(var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return h >>> 0;
+  }
+  function mintSig(serial, device){
+    var h1 = mintFnv(ADMIN_MINT_SECRET + ":" + serial + ":" + device),
+        h2 = mintFnv(device + ":" + serial + ":" + ADMIN_MINT_SECRET), s = "";
+    for(var i = 0; i < 6; i++){ s += MINT_ALPHA.charAt((h1 >>> (27 - i * 5)) & 31); }
+    for(var j = 0; j < 2; j++){ s += MINT_ALPHA.charAt((h2 >>> (27 - j * 5)) & 31); }
+    return s;
+  }
+  function adminMintKey(machineId){
+    var dev = String(machineId || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if(dev.length !== 8) return "";
+    var serial = "";
+    for(var i = 0; i < 8; i++){ serial += MINT_ALPHA.charAt(Math.floor(Math.random() * 32)); }
+    return "PFX2-" + serial + "-" + mintSig(serial, dev);
+  }
+
   /* ---- UI Toast notifications ---- */
   function showToast(msg){
     var t = document.getElementById("mToast");
@@ -715,9 +742,70 @@
     };
   }
 
+  /* ---- Make a key by hand (backup tool) ----
+     Mints a working, panel-valid key from the buyer's Machine ID alone.
+     Server when connected (so it lands in the shared DB and audit log),
+     local FNV-1a mint when not — same scheme, so both unlock the panel. */
+  var mkCreate = document.getElementById("mkCreate");
+  if(mkCreate){
+    mkCreate.onclick = function(){
+      var err = document.getElementById("mkErr");
+      var out = document.getElementById("mkResult");
+      err.textContent = "";
+      if(!isAdmin()){ err.textContent = "Admin only."; return; }
+      var email = document.getElementById("mkEmail").value.trim();
+      var nm = document.getElementById("mkMachine").value.trim().toUpperCase();
+      if(!/^[A-Za-z0-9]{8}$/.test(nm)){ err.textContent = "Machine ID must be exactly 8 letters/numbers."; return; }
+      if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "That email doesn't look right."; return; }
+      function showKey(key, where){
+        document.getElementById("mkKey").textContent = key;
+        document.getElementById("mkKey").setAttribute("data-key", key);
+        document.getElementById("mkWhere").textContent = where;
+        out.style.display = "";
+      }
+      if(window.PFXServer.live()){
+        mkCreate.disabled = true;
+        window.PFXServer.api("license-generate", { email: email || "manual@" + nm.toLowerCase() + ".local", machine: nm })
+          .then(function(r){
+            mkCreate.disabled = false;
+            if(!r.ok){ err.textContent = "Server refused (" + (r.error || "?") + ")."; return; }
+            showKey(r.key, "Saved to the server for " + (email || nm) + ".");
+            showToast("Key made for " + nm);
+            renderAdmin();
+          }).catch(function(e){
+            mkCreate.disabled = false;
+            err.textContent = String(e && e.message) === "session-expired" ? "Session expired — reconnect." : "Server unreachable — minting locally instead.";
+            if(String(e && e.message) !== "session-expired"){
+              var k = adminMintKey(nm);
+              if(k) showKey(k, "Made offline — the server was unreachable, so save this key somewhere yourself.");
+            }
+          });
+        return;
+      }
+      var k = adminMintKey(nm);
+      if(!k){ err.textContent = "Local mint unavailable."; return; }
+      showKey(k, "Made offline (no server connected) — save this key somewhere yourself.");
+      showToast("Key made for " + nm);
+    };
+  }
+  var mkCopy = document.getElementById("mkCopy");
+  if(mkCopy) mkCopy.onclick = function(){
+    var k = document.getElementById("mkKey").getAttribute("data-key") || "";
+    if(!k) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(k).then(function(){ showToast("Key copied"); }, function(){}); return; }
+    var ta = document.createElement("textarea"); ta.value = k; document.body.appendChild(ta);
+    ta.select(); try { document.execCommand("copy"); } catch(e){}
+    document.body.removeChild(ta); showToast("Key copied");
+  };
+  var mkReveal = document.getElementById("mkReveal");
+  if(mkReveal) mkReveal.onclick = function(){
+    var n = document.getElementById("mkKey");
+    n.style.webkitMaskImage = n.style.webkitMaskImage ? "" : "linear-gradient(#000,#000)";
+    n.style.filter = n.style.filter ? "" : "blur(7px)";
+  };
+
   var adminExport = document.getElementById("adminExport");
-  if(adminExport){
-    adminExport.onclick = function(){
+  if(adminExport){    adminExport.onclick = function(){
       var data = { exportedAt: new Date().toISOString(), users: authUsers(), licenses: lsGet("pfx-licenses", {}), coupons: window.PFXCoupons.all() };
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       var a = document.createElement("a");

@@ -129,6 +129,30 @@
   };
   function couponGet(){ try { return localStorage.getItem("pineapplefx-coupon") || ""; } catch(e){ return ""; } }
   function couponSet(c){ try { localStorage.setItem("pineapplefx-coupon", c); } catch(e){} }
+  /* Server lookup. Admin-created codes live in the server DB, so a buyer's
+     browser cannot know them from localStorage alone — without this every
+     admin-made code reads "That code did not work." The result is cached
+     locally so the price repaints correctly offline afterwards. */
+  function couponLookupRemote(code){
+    if(!window.fetch) return Promise.resolve(null);
+    var u;
+    try { u = window.PFXApi ? window.PFXApi("/api/coupons") : "/api/coupons"; } catch(e){ u = "/api/coupons"; }
+    var done = false;
+    var p = fetch(u, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code })
+    }).then(function(r){ done = true; return r.json().then(function(d){ return (r.ok && d && d.ok) ? d : null; }); })
+      .catch(function(){ done = true; return null; });
+    /* file:// and offline previews never answer — fail fast to local-only. */
+    var timeout = new Promise(function(res){ setTimeout(function(){ if(!done) res(null); }, 3000); });
+    return Promise.race([p, timeout]).then(function(d){
+      if(!d) return null;
+      var s = storeCoupons();
+      s[d.code] = { kind: d.kind, pct: d.pct, note: "", maxUses: d.maxUses, uses: d.uses || 0, remote: true };
+      lsSet("pfx-coupons", s);
+      return d.code;
+    });
+  }
 
   /* ---- Pineapple Store accounts (localStorage; demo-grade auth) ----
      Passwords are SHA-256 hashed (salted per user) before storage — never
@@ -365,8 +389,8 @@
     if(pp) pp.innerHTML = priceHTML(full);
     if(sub){
       sub.innerHTML = launchActive()
-        ? "$" + priceNum(full) + " USD (Launch Special — 33% Off, normal price $30). Free updates in the 2.x line. One license per machine."
-        : "$30 USD one-time. Free updates in the 2.x line. One license per machine.";
+        ? "$" + priceNum(full) + " USD (Launch Special — 33% Off, normal price $30). Free updates forever — every future version included. One license per machine."
+        : "$30 USD one-time. Free updates forever — every future version included. One license per machine.";
     }
     if(nav) nav.textContent = "Buy — $" + priceNum(full) + " USD";
     if(foot) foot.textContent = launchActive() ? "$20 launch special (reg. $30)" : "$30 one-time";
@@ -407,15 +431,25 @@
   if(couponApplyBtn) couponApplyBtn.onclick = function(){
     var v = document.getElementById("couponInput").value.trim();
     var msg = document.getElementById("couponMsg");
+    if(!v){ msg.style.color = "#e5484d"; msg.textContent = "Enter a code first."; return; }
     var def = couponDef(v);
-    if(def && couponUsable(v)){
-      var all = window.PFXCoupons.all(), hit = v;
-      var up = v.toUpperCase();
+    function accept(hit){
+      var all = window.PFXCoupons.all();
+      var up = hit.toUpperCase();
       Object.keys(all).forEach(function(k){ if(k.toUpperCase() === up) hit = k; });
       couponSet(hit); paintCoupon();
     }
-    else if(def) { msg.style.color = "#e5484d"; msg.textContent = "That code is fully redeemed."; }
-    else { msg.style.color = "#e5484d"; msg.textContent = "That code did not work."; }
+    if(def && couponUsable(v)){ accept(v); return; }
+    if(def && !couponUsable(v)){ msg.style.color = "#e5484d"; msg.textContent = "That code is fully redeemed."; return; }
+    /* not in this browser — ask the server before giving up */
+    msg.style.color = "var(--label-2)"; msg.textContent = "Checking code\u2026";
+    couponApplyBtn.disabled = true;
+    couponLookupRemote(v).then(function(hit){
+      couponApplyBtn.disabled = false;
+      if(hit){ accept(hit); return; }
+      msg.style.color = "#e5484d";
+      msg.textContent = "That code did not work.";
+    });
   };
   /* ---- account modal + session chrome ---- */
   var authModal = document.getElementById("authModal");

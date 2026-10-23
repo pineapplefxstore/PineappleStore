@@ -30,37 +30,17 @@ window.PineappleFXLic = (function(){
     } catch(err){ done(false); }
   }
 
-  /* --- local fallback: mints REAL panel-valid keys (no backend needed) ---
-     Byte-for-byte the same scheme as the After Effects panel gate
-     (PineappleFX/dist/index.html), tools/mint_key.py and api/generate-license.js:
-     FNV-1a over SECRET:serial:device (+ reverse), Crockford ALPHA,
-     PFX2-XXXXXXXX-XXXXXXXX. Only the serial randomness source differs
-     (Math.random here vs crypto on the server) — validation accepts any serial
-     whose signature matches, so fallback keys unlock the panel every time.
-     NOTE: the SECRET below is already public — it ships inside every .zxp
-     (see the PFX-GATE block). The server stays the source of truth for
-     emailed/delivered keys; this fallback exists so local testing works. */
-  var PFX_SECRET = "7c795771be81002adee1870b7dfbc589";
-  var SIM_ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-  function fnv1a(str){
-    var h = 0x811c9dc5;
-    for(var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-    return h >>> 0;
-  }
-  function sigFor(serial, device){
-    var h1 = fnv1a(PFX_SECRET + ":" + serial + ":" + device),
-        h2 = fnv1a(device + ":" + serial + ":" + PFX_SECRET), s = "";
-    for(var i = 0; i < 6; i++){ s += SIM_ALPHA.charAt((h1 >>> (27 - i * 5)) & 31); }
-    for(var j = 0; j < 2; j++){ s += SIM_ALPHA.charAt((h2 >>> (27 - j * 5)) & 31); }
-    return s;
-  }
+  /* --- SECURITY: no client-side key minting on the storefront ---
+     An earlier build kept a "local simulation" fallback here that minted REAL
+     panel-valid keys in the browser when /api/generate-license was unreachable.
+     That was a total bypass: production is static hosting, so the API is always
+     "unreachable" and any visitor could mint a working key for free by typing
+     any Machine ID. Keys are now ONLY ever produced by the server, after
+     payment (or an owner coupon) is confirmed. The mint secret is likewise no
+     longer shipped in any public JS — it lives in the server env and (necessarily)
+     inside the .zxp gate, which is the plugin itself. */
+  var NO_MINT_MSG = "The license server is not reachable right now, so keys can't be issued from this page. Please try again shortly, or contact pineapplefx.store@gmail.com with your Machine ID and order ID.";
   function normMachine(raw){ return String(raw || "").trim().toUpperCase(); }
-  function simulateKey(machineId){
-    var dev = normMachine(machineId), serial = "";
-    for(var i = 0; i < 8; i++){ serial += SIM_ALPHA.charAt(Math.floor(Math.random() * 32)); }
-    return "PFX2-" + serial + "-" + sigFor(serial, dev);
-  }
-  var SIM_NOTICE = '<p class="lic-sim">💡 Local simulation mode active — your key generated successfully.</p>';
 
   function keyCardHTML(key, opts){
     opts = opts || {};
@@ -71,7 +51,6 @@ window.PineappleFXLic = (function(){
       + (opts.recovered ? '<p class="lic-sim">♻ Recovered from your account — this machine already had a key, no duplicate created.</p>' : '')
       + '<button class="btn btn-pay" id="licCopyBtn" type="button">Copy Key</button>'
       + (opts.downloadUrl ? '<a class="lic-dl" id="licDl" href="' + esc(opts.downloadUrl) + '">⬇ Download PineappleFX .zxp installer</a>' : '')
-      + (opts.simulated ? SIM_NOTICE : '')
       + '<div class="lic-steps-mini"><b>Unlock in After Effects:</b><br>1. Install the .zxp &amp; restart After Effects<br>2. Open Window → Extensions → PineappleFX<br>3. Paste your key into the locked panel — unlocks instantly, offline.</div>';
   }
 
@@ -88,7 +67,6 @@ window.PineappleFXLic = (function(){
       + '<div class="keyline-big" style="font-size:15px;">' + esc(key) + '</div>'
       + '<button class="btn btn-pay" id="licCopyInline" type="button" style="width:100%;">Copy Key</button>'
       + (opts.downloadUrl ? '<a class="lic-dl" style="text-align:center;" href="' + esc(opts.downloadUrl) + '">⬇ Download .zxp installer</a>' : '')
-      + (opts.simulated ? '<div style="text-align:center;">' + SIM_NOTICE + '</div>' : '')
       + '<p style="font-size:12.5px;color:var(--label-2);text-align:center;margin-top:8px;">Paste your key into the PineappleFX After Effects panel to unlock instantly.</p>';
     document.getElementById("licCopyInline").onclick = function(){ copyKey(key, this); };
     var ordEl = document.getElementById("order"); if(ordEl) ordEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -96,23 +74,9 @@ window.PineappleFXLic = (function(){
 
   function mint(payload, ui){
     // ui: { setLoading(bool), onKey(key, data), onError(html) }
-    // Local-first: file:// has no backend, and a missing/dead API should
-    // never block testing — fall back to instant client-side simulation.
-    var settled = false;
-    function finishSimulated(){
-      if(settled) return;
-      settled = true;
-      ui.setLoading(false);
-      var key = simulateKey(payload.machine_id);
-      ui.onKey(key, { downloadUrl: ZXP_URL, simulated: true, email: payload.email });
-    }
-    if(location.protocol === "file:" || location.protocol === "file://"){
-      ui.setLoading(true);
-      setTimeout(finishSimulated, 600); // brief beat so the spinner reads naturally
-      return;
-    }
+    // SECURITY: keys are minted ONLY by the server, after payment is confirmed.
+    // There is deliberately no client-side fallback — see the note above.
     ui.setLoading(true);
-    var timer = setTimeout(finishSimulated, 7000); // API hanging or blocked → simulate
     fetch(apiUrl(ENDPOINT), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -123,26 +87,17 @@ window.PineappleFXLic = (function(){
         return data;
       });
     }).then(function(data){
-      if(settled) return;
-      settled = true;
-      clearTimeout(timer);
       ui.setLoading(false);
       ui.onKey(data.key, data);
     }).catch(function(err){
       var msg = String((err && err.message) || err);
-      var isNetwork = msg.indexOf("Failed to fetch") !== -1
-        || msg.indexOf("NetworkError") !== -1
-        || msg === "bad-response";
-      if(isNetwork){
-        // No backend here (local preview, API not deployed) → simulate, no red banner.
-        clearTimeout(timer);
-        finishSimulated();
+      // Any failure (offline, blocked, 404, timeout, bad response) fails CLOSED:
+      // never mint a key in the browser.
+      ui.setLoading(false);
+      if(msg === "bad-response" || msg.indexOf("Failed to fetch") !== -1 || msg.indexOf("NetworkError") !== -1){
+        ui.onError(NO_MINT_MSG);
         return;
       }
-      if(settled) return;
-      settled = true;
-      clearTimeout(timer);
-      ui.setLoading(false);
       var friendly = {
         "missing-fields": "Something's missing — enter your 8-character Machine ID and try again.",
         "bad-email": "PayPal didn't return a usable email — contact pineapplefx.store@gmail.com with your order ID.",
@@ -534,6 +489,10 @@ window.PineappleFXLic = (function(){
   }
   refreshDashboard();
 
+  /* NOTE: the local mint helper (simulateKey) is deliberately NOT exported here.
+     This file loads on the storefront, and exposing a one-line
+     window.PineappleFXLic.mintKey() would let any visitor mint working keys
+     from the browser console. Key minting lives in the admin page only. */
   return { handleApproval: handleApproval, refreshDashboard: refreshDashboard };
 })();
 
