@@ -16,6 +16,51 @@
     paint();
   };
   paint();
+
+  /* ---------- Security hardening ---------- */
+  function secGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function secSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  function applySecurity(){
+    var csp = secGet("pfx-sec-csp");
+    if(csp === "true"){
+      if(!document.querySelector("meta[http-equiv='Content-Security-Policy']")){
+        var m = document.createElement("meta");
+        m.httpEquiv = "Content-Security-Policy";
+        m.content = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.paypalobjects.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-src https://www.paypal.com https://www.paypalobjects.com; base-uri 'self'; form-action 'self';";
+        document.head.insertBefore(m, document.head.firstChild);
+      }
+    }
+    var sessMin = secGet("pfx-sec-session");
+    if(sessMin){
+      var lastAct = secGet("pfx-sec-last-act") || String(Date.now());
+      var limit = parseInt(sessMin, 10) * 60 * 1000;
+      if(Date.now() - parseInt(lastAct, 10) > limit){
+        try {
+          localStorage.removeItem("pfx-session");
+          localStorage.removeItem("pfx-admin-token");
+          localStorage.removeItem("pfx-is-admin");
+        } catch(e){}
+        secSet("pfx-sec-last-act", String(Date.now()));
+      } else {
+        secSet("pfx-sec-last-act", lastAct);
+      }
+    }
+    document.addEventListener("click", function(){ secSet("pfx-sec-last-act", String(Date.now())); }, {passive:true});
+    document.addEventListener("keypress", function(){ secSet("pfx-sec-last-act", String(Date.now())); }, {passive:true});
+  }
+  applySecurity();
+
+  var rateLimitMap = {};
+  function rateLimited(action, maxPerMin){
+    var now = Date.now();
+    var key = "rl:" + action;
+    var wins = (rateLimitMap[key] || []).filter(function(t){ return now - t < 60000; });
+    if(wins.length >= maxPerMin) return true;
+    wins.push(now);
+    rateLimitMap[key] = wins;
+    return false;
+  }
+  window.PFXRateLimit = rateLimited;
   /* ---- Pineapple Store pricing: $30 regular, $20 launch special (Oct 2026) ---- */
   var PRICE_REGULAR = "30.00", PRICE_LAUNCH = "20.00";
   var LAUNCH_END = Date.parse("2026-11-01T00:00:00Z"); // 1-month launch window
@@ -106,7 +151,8 @@
       if(BUILTIN_COUPONS[code] || storeCoupons()[code]) return { ok: false, error: "That code already exists." };
       if(def.kind !== "free" && !(def.pct >= 1 && def.pct <= 99)) return { ok: false, error: "Percent must be 1–99." };
       var s = storeCoupons();
-      s[code] = { kind: def.kind, pct: def.kind === "free" ? 0 : Math.round(def.pct), note: String(def.note || "").slice(0, 60), maxUses: def.maxUses || null, uses: 0, created: Date.now() };
+      s[code] = { kind: def.kind, pct: def.kind === "free" ? 0 : Math.round(def.pct), note: String(def.note || "").slice(0, 60), maxUses: def.maxUses || null, uses: 0, created: Date.now(),
+        program: def.program || "normal", platform: def.platform || "", channelId: def.channelId || "" };
       lsSet("pfx-coupons", s);
       return { ok: true, code: code };
     },
@@ -316,7 +362,7 @@
     couponDef: couponDef, couponUsable: couponUsable, couponAmount: couponAmount,
     basePrice: basePrice, halfPrice: halfPrice, launchActive: launchActive,
     priceNum: priceNum, paintCoupon: paintCoupon, renderPP: renderPP,
-    ADMIN_EMAIL: ADMIN_EMAIL, isAdmin: isAdmin, isOwner: isOwner, isLiveAdmin: isLiveAdmin, refreshServerPricing: refreshServerPricing
+    ADMIN_EMAIL: ADMIN_EMAIL, isAdmin: isAdmin, isOwner: isOwner, isLiveAdmin: isLiveAdmin, refreshServerPricing: refreshServerPricing, setPricing: setPricing
   };
   /* Admin-controlled pricing override: try /api/pricing once (3s); fall back
      to baked-in defaults so file:// and offline previews keep working. */
@@ -335,6 +381,28 @@
         }
       }).catch(function(){ if(timer) clearTimeout(timer); });
     } catch(e){}
+  }
+  /* Admin-controlled pricing override that also works offline / in local mode.
+     Saves to localStorage so the store price persists across reloads. */
+  function setPricing(regular, launch, launchEnd){
+    var changed = false;
+    if(regular != null && String(regular).trim() !== ""){
+      PRICE_REGULAR = Number(regular).toFixed(2); changed = true;
+    }
+    if(launch != null && String(launch).trim() !== ""){
+      PRICE_LAUNCH = Number(launch).toFixed(2); changed = true;
+    }
+    if(launchEnd != null && String(launchEnd).trim() !== ""){
+      var le = Date.parse(launchEnd);
+      if(!Number.isNaN(le)){ LAUNCH_END = le; changed = true; }
+    }
+    if(changed){
+      try { localStorage.setItem("pfx-price-regular", PRICE_REGULAR); } catch(e){}
+      try { localStorage.setItem("pfx-price-launch", PRICE_LAUNCH); } catch(e){}
+      try { localStorage.setItem("pfx-price-launchend", String(LAUNCH_END)); } catch(e){}
+      paintCoupon();
+    }
+    return { ok: true, regular: PRICE_REGULAR, launch: PRICE_LAUNCH, launchEnd: new Date(LAUNCH_END).toISOString() };
   }
   function bindClear(){
     var cl = document.getElementById("couponClear"); if(!cl) return;

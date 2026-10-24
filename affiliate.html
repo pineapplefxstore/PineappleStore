@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Affiliate Program — Pineapple Store</title>
+<meta name="description" content="Join the PineappleFX affiliate program. Earn by referring buyers, get beta access, and influence the roadmap." />
+<meta name="theme-color" content="#000000" />
+<link rel="icon" type="image/png" href="./assets/logo.png" />
+<link rel="stylesheet" href="./assets/site.css" />
+<link rel="stylesheet" href="./assets/premium.css" />
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="./"><img src="./assets/logo.png" alt="PineappleFX logo" />Pineapple<b>FX</b></a>
+  <div class="links">
+    <a class="nl" href="./">Home</a>
+    <a class="nl" href="store">Store</a>
+    <a class="nl on" href="affiliate">Affiliate Program</a>
+    <a class="nl" href="dashboard">My Licenses</a>
+    <a class="nl" href="faq">FAQ</a>
+    <a class="nl" href="admin" id="navAdmin" style="display:none;">Admin</a>
+    <button class="tbtn" id="themeBtn" title="Toggle dark / light">☾</button>
+    <div class="acct-wrap">
+      <button class="tbtn acct-btn" id="acctBtn" title="Account">👤 Account</button>
+      <div class="acct-menu" id="acctMenu">
+        <a href="dashboard">My Licenses</a>
+        <a href="admin" id="menuAdmin" style="display:none;">Admin Panel</a>
+        <a href="#" id="menuLogout">Log out</a>
+      </div>
+    </div>
+    <a class="nl buy-sm" id="navBuy" href="store">Buy — $20 USD</a>
+  </div>
+</div></nav>
+
+<header class="page-hero"><div class="wrap">
+  <span class="kicker">Pineapple Store</span>
+  <h1>PineappleFX Affiliate Program</h1>
+  <p>Refer buyers, earn commission, get beta builds early, and help shape the roadmap. Open to creators on YouTube, Instagram, TikTok, and X.</p>
+</div></header>
+
+<section id="aff-info"><div class="wrap" style="max-width:720px">
+  <div class="grid" style="margin-top:24px">
+    <div class="card">
+      <h3>💰 Earn on every sale</h3>
+      <p>Your affiliate code gives buyers a discount. When they pay, the sale is attributed to you. Track uses in real time.</p>
+    </div>
+    <div class="card">
+      <h3>🧪 Beta access</h3>
+      <p>Approved affiliates get early installer builds (.zxp) and beta keys before public release.</p>
+    </div>
+    <div class="card">
+      <h3>📣 Shape the roadmap</h3>
+      <p>Submit suggestions and feature requests. The admin reviews and replies — your input drives what gets built.</p>
+    </div>
+  </div>
+
+  <div class="lic-form" style="margin-top:40px">
+    <b style="font-size:16px;">Requirements</b>
+    <ul style="color:var(--label-2);margin-top:10px;line-height:1.8;padding-left:20px">
+      <li>At least <b>40 subscribers</b> on your channel.</li>
+      <li>Channel must be about motion design, After Effects, video editing, or creative tools.</li>
+      <li>Provide a valid email (Gmail preferred) for payouts and contact.</li>
+      <li>Agree to the terms &amp; conditions below.</li>
+    </ul>
+  </div>
+</div></section>
+
+<section id="aff-apply"><div class="wrap" style="max-width:640px">
+  <div class="lic-form">
+    <b style="font-size:16px;">Apply now</b>
+    <p style="font-size:13px;color:var(--label-2);margin-top:6px;">We review applications within a few days. Approved affiliates get a code and beta access.</p>
+
+    <form id="affForm" novalidate>
+      <label for="affName">Your name / channel name<input id="affName" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Alex on YouTube" /></label>
+
+      <label for="affEmail">Email (Gmail preferred)<input id="affEmail" type="email" autocomplete="email" placeholder="you@gmail.com" /></label>
+
+      <label for="affPlatform">Platform<select id="affPlatform">
+        <option value="youtube">YouTube</option>
+        <option value="instagram">Instagram</option>
+        <option value="tiktok">TikTok</option>
+        <option value="twitter">X / Twitter</option>
+      </select></label>
+
+      <label for="affChannelId">Channel / user ID<input id="affChannelId" class="mono" type="text" maxlength="80" autocomplete="off" placeholder="e.g. UCxxx… or @handle" /></label>
+
+      <label for="affSubs">Subscriber count<input id="affSubs" type="number" min="0" placeholder="e.g. 120" /></label>
+      <span class="lic-hint" id="subHint" style="color:#ff6961;">You need at least 40 subscribers.</span>
+
+      <label for="affInsights">Channel insights (what your audience likes, content type, why PineappleFX fits)<textarea id="affInsights" rows="4" placeholder="Tell us about your channel and audience…" style="display:block;width:100%;margin-top:6px;background:var(--grouped);border:none;border-radius:12px;color:var(--label);padding:12px 14px;font-size:15px;font-family:inherit;outline:none;"></textarea></label>
+
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;">
+        <input id="affTerms" type="checkbox" />
+        <label for="affTerms" style="font-size:13px;color:var(--label-2);margin:0;">I agree to the <a href="#" id="affTermsLink" style="color:var(--accent);font-weight:600;">Affiliate Terms &amp; Conditions</a>.</label>
+      </div>
+      <p class="auth-err" id="affErr" style="min-height:18px;"></p>
+      <button class="btn btn-pay" id="affApplyBtn" type="button" style="width:100%;">Apply to Affiliate Program</button>
+    </form>
+  </div>
+</div></section>
+
+<section id="aff-terms" style="display:none"><div class="wrap" style="max-width:720px">
+  <div class="lic-form">
+    <h2>Affiliate Terms &amp; Conditions</h2>
+    <p style="font-size:14px;color:var(--label-2);line-height:1.7;margin-bottom:14px;">
+      By joining the PineappleFX Affiliate Program you agree to:<br>
+      1. Your code is personal and must not be sold or shared publicly on coupon sites.<br>
+      2. Beta builds are confidential — do not redistribute .zxp files or keys.<br>
+      3. Sales attributed to your code are tracked automatically; you may request a usage report anytime.<br>
+      4. Pineapple Store may revoke affiliate access at any time for abuse or term violations.<br>
+      5. No payouts — this is a discount-based referral program; you get free access and beta builds instead.
+    </p>
+    <button class="btn btn-ghost" id="termsClose" type="button" style="width:100%;">Back to application</button>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="foot-grid">
+    <div class="foot-brand"><img src="./assets/logo.png" alt="" /><b>Pineapple<span>FX</span></b><p>The motion toolkit for After Effects, by Pineapple Store.</p></div>
+    <div class="foot-col"><b>Shop</b><a href="store">Pricing</a><a href="affiliate">Affiliate Program</a><a href="dashboard">My Licenses</a></div>
+    <div class="foot-col"><b>Support</b><a href="faq">FAQ</a><a href="mailto:pineapplefx.store@gmail.com?subject=PineappleFX%20affiliate">✉️ Email us</a></div>
+  </div>
+  <div class="foot-base">PineappleFX 2.0.0 · <span id="footPrice">$20 launch special (reg. $30)</span></div>
+</div></footer>
+
+<script src="./assets/pfx-core.js"></script>
+<script>
+(function(){
+  var termsLink = document.getElementById("affTermsLink");
+  var termsClose = document.getElementById("termsClose");
+  var termsSec = document.getElementById("aff-terms");
+  if(termsLink) termsLink.onclick = function(e){ if(e && e.preventDefault) e.preventDefault(); termsSec.style.display = ""; };
+  if(termsClose) termsClose.onclick = function(){ termsSec.style.display = "none"; };
+
+  var subInput = document.getElementById("affSubs");
+  var subHint = document.getElementById("subHint");
+  if(subInput){ subInput.oninput = function(){
+    var n = parseInt(subInput.value || "0", 10);
+    if(subHint){ subHint.style.display = (n >= 40) ? "none" : ""; subHint.textContent = n >= 40 ? "" : "You need at least 40 subscribers."; }
+  }; }
+
+  var form = document.getElementById("affForm");
+  var btn = document.getElementById("affApplyBtn");
+  var err = document.getElementById("affErr");
+  if(form && btn){
+    btn.onclick = function(){
+      err.textContent = "";
+      var name = (document.getElementById("affName").value || "").trim();
+      var email = (document.getElementById("affEmail").value || "").trim();
+      var platform = document.getElementById("affPlatform").value;
+      var channelId = (document.getElementById("affChannelId").value || "").trim();
+      var subs = parseInt((document.getElementById("affSubs").value || "0"), 10);
+      var insights = (document.getElementById("affInsights").value || "").trim();
+      var terms = document.getElementById("affTerms").checked;
+      if(!name){ err.textContent = "Enter your name or channel name."; return; }
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Enter a valid email."; return; }
+      if(!channelId){ err.textContent = "Enter your channel / user ID."; return; }
+      if(subs < 40){ err.textContent = "You need at least 40 subscribers to apply."; return; }
+      if(!insights){ err.textContent = "Tell us about your channel and audience."; return; }
+      if(!terms){ err.textContent = "You must agree to the terms &amp; conditions."; return; }
+
+      btn.disabled = true;
+      btn.textContent = "Submitting…";
+
+      if(window.PFXRateLimit && window.PFXRateLimit("aff-apply", 5)){
+        btn.disabled = false;
+        btn.textContent = "Apply to Affiliate Program";
+        err.textContent = "Too many applications — try again in a minute.";
+        return;
+      }
+
+      var application = {
+        id: "af-" + Date.now().toString(36) + "-" + Math.floor(Math.random()*1e9).toString(36),
+        name: name, email: email, platform: platform, channelId: channelId,
+        subs: subs, insights: insights, status: "pending",
+        created: Date.now()
+      };
+
+      // Save locally so the admin can review it
+      var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+      all[application.id] = application;
+      localStorage.setItem("pfx-aff-applications", JSON.stringify(all));
+
+      btn.textContent = "Application sent ✓";
+      btn.style.background = "#22c55e";
+      btn.style.color = "#241a04";
+      err.textContent = "";
+      setTimeout(function(){
+        document.getElementById("affName").value = "";
+        document.getElementById("affEmail").value = "";
+        document.getElementById("affChannelId").value = "";
+        document.getElementById("affSubs").value = "";
+        document.getElementById("affInsights").value = "";
+        document.getElementById("affTerms").checked = false;
+        btn.disabled = false;
+        btn.textContent = "Apply to Affiliate Program";
+        btn.style.background = "";
+        btn.style.color = "";
+      }, 1500);
+    };
+  }
+})();
+</script>
+</body>
+</html>

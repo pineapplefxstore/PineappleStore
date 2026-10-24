@@ -3,17 +3,17 @@
    SF type stack, 980px content width, pill buttons, glass nav, big statement type. */
 
 :root{
-  --surface:#ffffff; --grouped:#f5f5f7; --elevated:#ffffff;
-  --label:#1d1d1f; --label-2:#6e6e73; --label-3:#86868b;
-  --accent:#a07000; --accent-hi:#c08800; --accent-ink:#241a04;
-  --brand:#c79400; --brand-hi:#f5c400;
+  --surface:#0b0b0c; --grouped:#161618; --elevated:#121214;
+  --label:#f5f5f7; --label-2:#a1a1a6; --label-3:#86868b;
+  --accent:#feca08; --accent-hi:#ffd850; --accent-ink:#241a04;
+  --brand:#feca08; --brand-hi:#ffd850;
   --btn:#feca08; --btn-hi:#ffd850;
-  --hairline:#d2d2d7; --glow:rgba(254,202,8,.18);
-  --danger:#d70015;
+  --hairline:#333336; --glow:rgba(254,202,8,.14);
+  --danger:#ff6961;
   --mock-bg:#1d1d1f; --mock-card:#2c2c2e; --mock-line:#3a3a3c; --mock-txt:#f5f5f7; --mock-dim:#a1a1a6;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI Variable Display","Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
-  color-scheme:light;
+  color-scheme:dark;
 }
 html[data-theme="dark"]{
   --surface:#000000; --grouped:#1d1d1f; --elevated:#2a2a2c;

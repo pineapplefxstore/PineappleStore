@@ -688,6 +688,8 @@
         };
       });
     }
+    renderAffSuggestions();
+    renderAffBeta();
   }
 
   function statCard(n, label){ return '<div class="stat-card"><b>' + n + '</b><span>' + label + '</span></div>'; }
@@ -709,16 +711,34 @@
       err.textContent = "";
       if(!isAdmin()){ err.textContent = "Admin only."; return; }
       var code = document.getElementById("cpCode").value;
+      var program = document.getElementById("cpProgram").value;
+      var platform = document.getElementById("cpPlatform").value;
+      var channelId = document.getElementById("cpChannelId").value.trim();
       var type = document.getElementById("cpType").value;
       var pct = parseInt(document.getElementById("cpPct").value, 10);
       var maxRaw = document.getElementById("cpMax").value;
+      var note = document.getElementById("cpNote").value;
+      if(program === "affiliate" && !channelId){ err.textContent = "Affiliate codes need a channel/user ID."; return; }
       var payload = {
         kind: type, pct: pct,
         maxUses: maxRaw === "" ? null : Math.max(1, parseInt(maxRaw, 10) || 1),
-        note: document.getElementById("cpNote").value
+        note: note,
+        program: program,
+        platform: platform,
+        channelId: channelId
       };
+      // Auto-fill affiliate code if empty
+      if(program === "affiliate" && !code){
+        var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
+        for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
+        code = "PFX-" + platform.slice(0,3).toUpperCase() + "-" + s.slice(4);
+        document.getElementById("cpCode").value = code;
+      }
+      if(!code){ err.textContent = "Enter a code (or leave blank for affiliate auto-code)."; return; }
+      code = code.toUpperCase();
       function createdOk(label){
         document.getElementById("cpCode").value = "";
+        document.getElementById("cpChannelId").value = "";
         document.getElementById("cpNote").value = "";
         document.getElementById("cpMax").value = "";
         showToast("Coupon " + label + " created");
@@ -727,7 +747,8 @@
       }
       if(window.PFXServer.live()){
         window.PFXServer.api("coupon-create", {
-          code: code, kind: payload.kind, pct: payload.pct, maxUses: payload.maxUses, note: payload.note
+          code: code, kind: payload.kind, pct: payload.pct, maxUses: payload.maxUses, note: payload.note,
+          program: payload.program, platform: payload.platform, channelId: payload.channelId
         }).then(function(r){
           if(!r.ok){ err.textContent = r.error === "exists" ? "That code already exists." : "Create failed (" + (r.error || "?") + ")."; return; }
           createdOk(r.code);
@@ -835,6 +856,138 @@
     n.style.webkitMaskImage = n.style.webkitMaskImage ? "" : "linear-gradient(#000,#000)";
     n.style.filter = n.style.filter ? "" : "blur(7px)";
   };
+
+  /* ---------- Affiliate Suggestions & Requests ---------- */
+  var affSuggestRefresh = document.getElementById("affSuggestRefresh");
+  if(affSuggestRefresh){
+    affSuggestRefresh.onclick = function(){ renderAffSuggestions(); };
+  }
+  function renderAffSuggestions(){
+    var box = document.getElementById("affSuggestions");
+    if(!box) return;
+    box.innerHTML = '<p style="font-size:13px;color:var(--label-2);">Loading…</p>';
+    var all = lsGet("pfx-aff-suggestions", {});
+    var items = Object.values(all).sort(function(a,b){ return (b.at||0) - (a.at||0); });
+    var html = "";
+    if(!items.length){ html = '<p style="font-size:13px;color:var(--label-2);">No suggestions yet. Affiliates can apply and send feedback from the website.</p>'; }
+    else {
+      items.forEach(function(s){
+        var statusTag = s.status === "done" ? '<span class="tag" style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;">done</span>'
+          : s.status === "rejected" ? '<span class="tag" style="background:rgba(229,72,77,0.15);color:#ff4d4f;border:1px solid #ff4d4f;">rejected</span>'
+          : '<span class="tag" style="background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">open</span>';
+        var betaTag = s.beta ? ' <span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">beta</span>' : '';
+        html += '<div class="coupon-row"><div style="flex:1;min-width:200px;">'
+          + '<b>' + escHtml(s.name) + '</b> ' + statusTag + betaTag + '<br>'
+          + '<span style="color:var(--label-3);font-size:11px;">' + escHtml(s.email || "no email") + ' · ' + new Date(s.at||0).toLocaleString() + '</span><br>'
+          + '<span style="color:var(--label-2);font-size:12px;">' + escHtml(s.type) + ': ' + escHtml(s.message || "") + '</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:6px;">'
+          + (s.status !== "done" ? '<button class="mini-btn" data-aff-done="' + escHtml(s.id) + '" type="button">Mark Done</button>' : '')
+          + (s.status !== "rejected" ? '<button class="danger-btn del-cpn-btn" data-aff-rej="' + escHtml(s.id) + '" type="button">Reject</button>' : '')
+          + '<button class="mini-btn" data-aff-beta="' + escHtml(s.id) + '" type="button">' + (s.beta ? 'Revoke Beta' : 'Grant Beta') + '</button>'
+          + '</div></div>';
+      });
+    }
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-done]"), function(b){
+      b.onclick = function(){ setAffStatus(b.getAttribute("data-aff-done"), "done"); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-rej]"), function(b){
+      b.onclick = function(){ setAffStatus(b.getAttribute("data-aff-rej"), "rejected"); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-beta]"), function(b){
+      b.onclick = function(){ toggleAffBeta(b.getAttribute("data-aff-beta"), !JSON.parse(b.getAttribute("data-aff-beta") === "true" || b.getAttribute("data-aff-beta"))); };
+    });
+  }
+  function setAffStatus(id, status){
+    var all = lsGet("pfx-aff-suggestions", {});
+    if(all[id]){ all[id].status = status; all[id].at = Date.now(); lsSet("pfx-aff-suggestions", all); showToast("Updated"); renderAffSuggestions(); renderAffBeta(); }
+  }
+  function toggleAffBeta(id, grant){
+    var all = lsGet("pfx-aff-suggestions", {});
+    if(all[id]){ all[id].beta = grant; all[id].at = Date.now(); lsSet("pfx-aff-suggestions", all); showToast(grant ? "Beta granted" : "Beta revoked"); renderAffSuggestions(); renderAffBeta(); }
+  }
+
+  /* ---------- Beta Access List ---------- */
+  var affBetaRefresh = document.getElementById("affBetaRefresh");
+  if(affBetaRefresh){ affBetaRefresh.onclick = function(){ renderAffBeta(); }; }
+  function renderAffBeta(){
+    var box = document.getElementById("affBetaList");
+    if(!box) return;
+    var all = lsGet("pfx-aff-suggestions", {});
+    var betas = Object.values(all).filter(function(s){ return s.beta === true; });
+    var html = "";
+    if(!betas.length){ html = '<p style="font-size:13px;color:var(--label-2);">No affiliates have beta access yet.</p>'; }
+    else {
+      betas.forEach(function(s){
+        html += '<div class="coupon-row"><b>' + escHtml(s.name) + '</b> <span style="color:var(--label-3);font-size:11px;">' + escHtml(s.email || "") + '</span>'
+          + '<button class="mini-btn" data-aff-revoke-beta="' + escHtml(s.id) + '" type="button">Revoke Beta</button></div>';
+      });
+    }
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-revoke-beta]"), function(b){
+      b.onclick = function(){ toggleAffBeta(b.getAttribute("data-aff-revoke-beta"), false); };
+    });
+  }
+
+  /* ---------- Installer Update ---------- */
+  var instUpdate = document.getElementById("instUpdate");
+  if(instUpdate){
+    instUpdate.onclick = function(){
+      var err = document.getElementById("instErr");
+      var out = document.getElementById("instResult");
+      err.textContent = ""; out.style.display = "none";
+      var file = document.getElementById("instFile").files && document.getElementById("instFile").files[0];
+      var ver = (document.getElementById("instVersion").value || "").trim();
+      if(!file){ err.textContent = "Pick a .zxp file first."; return; }
+      if(!/\.zxp$/i.test(file.name)){ err.textContent = "File must be a .zxp."; return; }
+      if(!ver){ err.textContent = "Enter a version (e.g. 2.1.0)."; return; }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var ab = reader.result;
+        // Validate it looks like a zip/zxp (starts with PK)
+        var bytes = new Uint8Array(ab.slice(0,4));
+        if(bytes[0]!==0x50||bytes[1]!==0x4b){ err.textContent = "That doesn't look like a valid .zxp (zip)."; return; }
+        // Save as base64 data URL so the site can serve/re-download it offline
+        var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(ab)));
+        var dataUrl = "data:application/zip;base64," + b64;
+        try {
+          localStorage.setItem("pfx-installer-zxp", dataUrl);
+          localStorage.setItem("pfx-installer-version", ver);
+          localStorage.setItem("pfx-installer-updated", String(Date.now()));
+        } catch(e){ err.textContent = "Could not save locally."; return; }
+        out.style.display = "";
+        out.innerHTML = '<p style="color:#22c55e;">Installer updated to <b>' + escHtml(ver) + '</b> (' + Math.round(ab.byteLength/1024) + ' KB).</p>'
+          + '<button class="mini-btn" id="instDownload" type="button">Download updated .zxp</button>';
+        document.getElementById("instDownload").onclick = function(){
+          var a = document.createElement("a"); a.href = dataUrl; a.download = "PineappleFX-" + ver + ".zxp";
+          document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
+        };
+        showToast("Installer updated to " + ver);
+      };
+      reader.readAsArrayBuffer(file);
+    };
+  }
+
+  /* ---------- Security Settings ---------- */
+  var secSave = document.getElementById("secSave");
+  if(secSave){
+    secSave.onclick = function(){
+      var err = document.getElementById("secErr");
+      err.textContent = "";
+      var rl = document.getElementById("secRateLimit").value;
+      var sess = document.getElementById("secSession").value;
+      var csp = document.getElementById("secCSP").checked;
+      if(!rl || rl < 1){ err.textContent = "Enter a valid rate limit."; return; }
+      if(!sess || sess < 5){ err.textContent = "Enter a valid session timeout."; return; }
+      try {
+        localStorage.setItem("pfx-sec-ratelimit", rl);
+        localStorage.setItem("pfx-sec-session", sess);
+        localStorage.setItem("pfx-sec-csp", String(csp));
+      } catch(e){ err.textContent = "Could not save."; return; }
+      showToast("Security settings saved");
+    };
+  }
 
   var adminExport = document.getElementById("adminExport");
   if(adminExport){    adminExport.onclick = function(){

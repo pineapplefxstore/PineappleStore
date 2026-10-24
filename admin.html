@@ -49,7 +49,7 @@
     </div>
     <p style="font-size:12px;color:var(--label-3);margin-top:10px;">Want one shared list on all your devices? Run <code>npx vercel dev</code> on your computer, then log in on the locked screen once.</p>
   </div>
-  <div class="lic-form" id="priceCard" style="margin-top:12px;display:none;">
+  <div class="lic-form" id="priceCard" style="margin-top:12px;">
     <b>Prices <span style="font-size:11px;color:var(--label-3);font-weight:400;">(change the store price any time)</span></b>
     <div class="admin-form">
       <label for="prReg">Regular price (USD)<input id="prReg" type="text" inputmode="decimal" placeholder="30.00" /></label>
@@ -75,6 +75,21 @@
           <button class="mini-btn" id="cpRandom" type="button" style="padding:10px 16px;">🎲</button>
         </span>
       </label>
+      <label for="cpProgram">Program type
+        <select id="cpProgram">
+          <option value="normal">Normal discount code</option>
+          <option value="affiliate">Affiliate program code</option>
+        </select>
+      </label>
+      <label for="cpPlatform">Social platform (affiliate only)
+        <select id="cpPlatform">
+          <option value="youtube">YouTube</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="twitter">X / Twitter</option>
+        </select>
+      </label>
+      <label for="cpChannelId">Channel / user ID (affiliate only)<input id="cpChannelId" type="text" maxlength="80" placeholder="e.g. UCxxx or @handle" /></label>
       <label for="cpType">Type
         <select id="cpType">
           <option value="percent">Percent off</option>
@@ -131,6 +146,45 @@
         <button class="mini-btn" id="mkReveal" type="button">Reveal / hide</button>
       </div>
       <p id="mkWhere" style="font-size:12px;color:var(--label-3);margin-top:8px;"></p>
+    </div>
+  </div>
+
+  <div class="lic-form" style="margin-top:12px;">
+    <b>💬 Affiliate Suggestions &amp; Requests</b>
+    <p style="font-size:13px;color:var(--label-2);">Affiliates can submit suggestions, feature requests, and feedback. Reply to them from here. Beta access is granted below.</p>
+    <div id="affSuggestions"></div>
+    <button class="btn btn-ghost" id="affSuggestRefresh" type="button" style="width:100%;margin-top:10px;">↻ Refresh</button>
+  </div>
+
+  <div class="lic-form" style="margin-top:12px;">
+    <b>🧪 Beta Access</b>
+    <p style="font-size:13px;color:var(--label-2);">Approved affiliates get early installer builds and beta keys. Toggle access per affiliate.</p>
+    <div id="affBetaList"></div>
+    <button class="btn btn-ghost" id="affBetaRefresh" type="button" style="width:100%;margin-top:10px;">↻ Refresh</button>
+  </div>
+
+  <div class="lic-form" style="margin-top:12px;">
+    <b>📦 Update Installer (.zxp)</b>
+    <p style="font-size:13px;color:var(--label-2);">Upload a new PineappleFX.zxp to replace the installer served from downloads/. Bumps the version shown site-wide.</p>
+    <label for="instFile">New installer file<input id="instFile" type="file" accept=".zxp" /></label>
+    <label for="instVersion">Version<input id="instVersion" type="text" placeholder="e.g. 2.1.0" /></label>
+    <button class="btn btn-pay" id="instUpdate" type="button" style="width:100%;">Update Installer</button>
+    <p class="auth-err" id="instErr" style="min-height:18px;"></p>
+    <div id="instResult" style="display:none;margin-top:10px;"></div>
+    <p style="font-size:12px;color:var(--label-3);">On GitHub Pages this generates a replacement downloads/PineappleFX.zxp you commit. With a server backend it writes live.</p>
+  </div>
+
+  <div class="lic-form" style="margin-top:12px;">
+    <b>🔒 Security Settings</b>
+    <p style="font-size:13px;color:var(--label-2);">Harden the storefront against abuse. These apply on this device (local mode) and are echoed to the server when connected.</p>
+    <div class="admin-form">
+      <label for="secRateLimit">Rate limit (requests per minute per IP)<input id="secRateLimit" type="number" min="1" max="600" value="30" /></label>
+      <label for="secSession">Session timeout (minutes)<input id="secSession" type="number" min="5" max="10080" value="10080" /></label>
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input id="secCSP" type="checkbox" checked /> Enable strict Content-Security-Policy header
+      </label>
+      <button class="btn btn-pay" id="secSave" type="button" style="width:100%;">Save Security Settings</button>
+      <p class="auth-err" id="secErr" style="min-height:18px;"></p>
     </div>
   </div>
 </div></section>
