@@ -690,6 +690,7 @@
     }
     renderAffSuggestions();
     renderAffBeta();
+    renderAffApps();
   }
 
   function statCard(n, label){ return '<div class="stat-card"><b>' + n + '</b><span>' + label + '</span></div>'; }
@@ -928,6 +929,94 @@
     Array.prototype.forEach.call(box.querySelectorAll("[data-aff-revoke-beta]"), function(b){
       b.onclick = function(){ toggleAffBeta(b.getAttribute("data-aff-revoke-beta"), false); };
     });
+  }
+
+  /* ---------- Affiliate Applications Review ---------- */
+  var affAppsRefresh = document.getElementById("affAppsRefresh");
+  if(affAppsRefresh){ affAppsRefresh.onclick = function(){ renderAffApps(); }; }
+  function renderAffApps(){
+    var box = document.getElementById("affApps");
+    if(!box) return;
+    box.innerHTML = '<p style="font-size:13px;color:var(--label-2);">Loading…</p>';
+    var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+    var items = Object.values(all).sort(function(a,b){ return (b.created||0) - (a.created||0); });
+    var html = "";
+    if(!items.length){ html = '<p style="font-size:13px;color:var(--label-2);">No affiliate applications yet.</p>'; }
+    else {
+      items.forEach(function(app){
+        var statusTag = app.status === "approved" ? '<span class="tag" style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;">approved</span>'
+          : app.status === "rejected" ? '<span class="tag" style="background:rgba(229,72,77,0.15);color:#ff4d4f;border:1px solid #ff4d4f;">rejected</span>'
+          : '<span class="tag" style="background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">pending</span>';
+        html += '<div class="coupon-row"><div style="flex:1;min-width:220px;">'
+          + '<b>' + escHtml(app.name) + '</b> ' + statusTag + '<br>'
+          + '<span style="color:var(--label-3);font-size:11px;">' + escHtml(app.email) + ' · ' + escHtml(app.platform) + ' · ' + escHtml(app.channelId) + '</span><br>'
+          + '<span style="color:var(--label-2);font-size:12px;">' + app.subs + ' subs · ' + new Date(app.created||0).toLocaleString() + '</span><br>'
+          + '<span style="color:var(--label-2);font-size:11px;">' + escHtml(app.insights || "") + '</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:6px;">'
+          + (app.status === "pending" ? '<button class="mini-btn" data-aff-approve="' + escHtml(app.id) + '" type="button">Approve</button>' : '')
+          + (app.status === "pending" ? '<button class="danger-btn del-cpn-btn" data-aff-reject-app="' + escHtml(app.id) + '" type="button">Reject</button>' : '')
+          + (app.status === "approved" && app.couponCode ? '<button class="mini-btn" data-aff-resend="' + escHtml(app.id) + '" type="button">Resend Code</button>' : '')
+          + '</div></div>';
+        if(app.status === "approved" && app.couponCode){
+          html += '<div style="margin:8px 0 0;padding:10px;background:var(--grouped);border-radius:10px;font-size:12px;color:var(--label-2);">'
+            + '<b>Coupon sent:</b> <code style="color:#feca08;">' + escHtml(app.couponCode) + '</code> → ' + escHtml(app.email)
+            + '</div>';
+        }
+      });
+    }
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-approve]"), function(b){
+      b.onclick = function(){ approveAffApp(b.getAttribute("data-aff-approve")); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-reject-app]"), function(b){
+      b.onclick = function(){ rejectAffApp(b.getAttribute("data-aff-reject-app")); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-resend]"), function(b){
+      b.onclick = function(){ resendAffCode(b.getAttribute("data-aff-resend")); };
+    });
+  }
+  function approveAffApp(id){
+    var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+    var app = all[id];
+    if(!app) return;
+    if(app.status !== "pending"){ showToast("Already processed."); return; }
+    // Generate a free affiliate coupon code
+    var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
+    for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
+    var code = "PFX-AFF-" + s.slice(4);
+    var coupons = window.PFXCoupons ? window.PFXCoupons.all() : {};
+    if(coupons[code]){ showToast("Code collision, retry."); return; }
+    var def = { kind: "free", pct: 0, note: "Affiliate: " + escHtml(app.name) + " (" + escHtml(app.platform) + ")", maxUses: null, uses: 0, created: Date.now(), program: "affiliate", platform: app.platform, channelId: app.channelId };
+    var r = window.PFXCoupons.create(code, def);
+    if(!r.ok){ showToast("Coupon create failed: " + r.error); return; }
+    app.status = "approved";
+    app.couponCode = code;
+    app.approvedAt = Date.now();
+    all[id] = app;
+    localStorage.setItem("pfx-aff-applications", JSON.stringify(all));
+    showToast("Approved! Coupon " + code + " ready for " + app.email);
+    renderAffApps();
+    renderAffSuggestions();
+    renderAffBeta();
+    paintCoupon();
+  }
+  function rejectAffApp(id){
+    var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+    var app = all[id];
+    if(!app) return;
+    app.status = "rejected";
+    app.rejectedAt = Date.now();
+    all[id] = app;
+    localStorage.setItem("pfx-aff-applications", JSON.stringify(all));
+    showToast("Application rejected.");
+    renderAffApps();
+  }
+  function resendAffCode(id){
+    var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+    var app = all[id];
+    if(!app || !app.couponCode){ showToast("No code to resend."); return; }
+    showToast("Coupon " + app.couponCode + " would be re-sent to " + app.email + " (configure your SMTP to actually send email).");
   }
 
   /* ---------- Installer Update ---------- */
