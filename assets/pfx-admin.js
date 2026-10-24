@@ -981,10 +981,11 @@
     var app = all[id];
     if(!app) return;
     if(app.status !== "pending"){ showToast("Already processed."); return; }
-    // Generate a free affiliate coupon code
+    // Generate a free affiliate coupon code: AFX-{username}-{random}
     var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
     for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
-    var code = "PFX-AFF-" + s.slice(4);
+    var uname = String(app.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) || "PARTNER";
+    var code = "AFX-" + uname + "-" + s.slice(4);
     var coupons = window.PFXCoupons ? window.PFXCoupons.all() : {};
     if(coupons[code]){ showToast("Code collision, retry."); return; }
     var def = { kind: "free", pct: 0, note: "Affiliate: " + escHtml(app.name) + " (" + escHtml(app.platform) + ")", maxUses: null, uses: 0, created: Date.now(), program: "affiliate", platform: app.platform, channelId: app.channelId };

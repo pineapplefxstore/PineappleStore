@@ -136,11 +136,11 @@ h2{font-size:clamp(32px,5vw,48px);font-weight:600;letter-spacing:-.015em;line-he
 .mock-shell.is-collapsed .mock-list{max-height:330px;overflow:hidden}
 .mock-shell.is-collapsed .mock-body::after{content:"";position:absolute;left:0;right:0;bottom:41px;height:130px;pointer-events:none;
   background:linear-gradient(to bottom,rgba(10,10,12,0) 0%,var(--mock-bg) 92%)}
-.mock-expand{display:flex;justify-content:center;margin-top:26px}
-.mock-expand button{font:inherit;font-size:13px;font-weight:600;color:var(--mock-txt);background:var(--mock-card);
-  border:1px solid var(--mock-line);border-radius:980px;padding:10px 26px;cursor:pointer;transition:.2s;
+.mock-expand{display:flex;justify-content:center;margin-top:10px}
+.mock-expand button{font:inherit;font-size:13px;font-weight:600;color:#241a04;background:#feca08;
+  border:1px solid #feca08;border-radius:980px;padding:10px 26px;cursor:pointer;transition:.2s;
   display:inline-flex;align-items:center;gap:9px}
-.mock-expand button:hover{border-color:#feca08;color:#feca08}
+.mock-expand button:hover{background:#ffd850;border-color:#ffd850}
 .mock-expand button .chev{display:inline-block;transition:transform .4s;font-size:11px}
 .mock-shell.is-expanded .mock-expand button .chev{transform:rotate(180deg)}
 
