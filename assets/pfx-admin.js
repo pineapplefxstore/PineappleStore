@@ -669,6 +669,7 @@
     emails.sort().forEach(function(em){
       var ms = vault[em] || {}, keys = Object.keys(ms).sort();
       uh += '<div class="user-block"><b>' + escHtml(em) + '</b> <span style="color:var(--label-3);font-size:12px;">· ' + keys.length + ' computer' + (keys.length === 1 ? "" : "s") + '</span>'
+        + ' <button class="mini-btn" data-reset-pw="' + escHtml(em) + '" type="button" style="margin-left:8px;">Reset Password</button>'
         + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
         uh += '<div class="dash-row" style="margin:8px 0 0;"><span class="mid">' + escHtml(mch) + '</span>'
@@ -679,6 +680,27 @@
     });
     if(ub){
       ub.innerHTML = uh;
+      Array.prototype.forEach.call(ub.querySelectorAll("[data-reset-pw]"), function(b){
+        b.onclick = function(){
+          var em = b.getAttribute("data-reset-pw");
+          var np = prompt("Enter new password for " + em + " (minimum 8 characters):", "");
+          if(np === null) return;
+          np = np.trim();
+          if(np.length < 8){
+            alert("Password must be at least 8 characters long.");
+            return;
+          }
+          if(window.PFXAuth && window.PFXAuth.setPassword){
+            window.PFXAuth.setPassword(em, np).then(function(res){
+              if(res && res.ok){
+                showToast("Password updated for " + em);
+              } else {
+                alert("Error setting password: " + (res && res.error ? res.error : "Unknown error"));
+              }
+            });
+          }
+        };
+      });
       Array.prototype.forEach.call(ub.querySelectorAll("[data-del-person]"), function(b){
         b.onclick = function(){
           var em = b.getAttribute("data-del-person");

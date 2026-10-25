@@ -392,6 +392,25 @@
       } catch(e){}
       authFire();
     },
+    setPassword: function(email, pass){
+      email = String(email || "").trim().toLowerCase();
+      if(!authValidEmail(email)) return Promise.resolve({ ok: false, error: "Enter a valid email address." });
+      if(String(pass || "").length < 8) return Promise.resolve({ ok: false, error: "Password needs at least 8 characters." });
+      var users = authUsers();
+      if(!users[email]) return Promise.resolve({ ok: false, error: "User not found." });
+      var salt = "";
+      try {
+        var r = new Uint32Array(4);
+        (crypto.getRandomValues ? crypto.getRandomValues(r) : r.map(function(){ return Math.floor(Math.random() * 4294967296); }));
+        salt = Array.prototype.join.call(r, "-");
+      } catch(e){ salt = String(Date.now()) + Math.random(); }
+      return sha256hex(salt + "::" + pass).then(function(hash){
+        users[email].salt = salt;
+        users[email].hash = hash;
+        lsSet("pfx-users", users);
+        return { ok: true, email: email };
+      });
+    },
     require: function(){ return !!authSession(); }
   };
   /* Per-account license vault: email -> { machineID -> {key, at, orderID, coupon} } */
