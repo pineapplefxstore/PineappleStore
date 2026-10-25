@@ -158,7 +158,13 @@
 
   <div class="lic-form" style="margin-top:12px;">
     <b>🧪 Beta Access</b>
-    <p style="font-size:13px;color:var(--label-2);">Approved affiliates get early installer builds and beta keys. Toggle access per affiliate.</p>
+    <p style="font-size:13px;color:var(--label-2);">Grant and manage early access to beta builds and beta keys. You can grant access to any user or affiliate by email.</p>
+    
+    <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap;">
+      <input type="email" id="affBetaManualEmail" placeholder="Enter email to grant beta access" style="flex:1;min-width:220px;padding:9px 12px;background:var(--grouped);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:13px;" />
+      <button class="btn btn-pay" id="affBetaManualGrant" type="button" style="padding:9px 16px;font-size:13px;white-space:nowrap;">Grant Beta Access</button>
+    </div>
+
     <div id="affBetaList"></div>
     <button class="btn btn-ghost" id="affBetaRefresh" type="button" style="width:100%;margin-top:10px;">↻ Refresh</button>
   </div>

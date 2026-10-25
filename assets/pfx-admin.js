@@ -666,10 +666,14 @@
     // local users
     var ub = document.getElementById("adminUsers"), uh = "";
     if(!emails.length) uh = '<p style="font-size:13px;color:var(--label-2);">No people yet. When buyers sign up on this device, they show up here.</p>';
+    var betaMapNow = lsGet("pfx-beta-access", {});
     emails.sort().forEach(function(em){
       var ms = vault[em] || {}, keys = Object.keys(ms).sort();
+      var hasBeta = !!betaMapNow[em.toLowerCase()];
       uh += '<div class="user-block"><b>' + escHtml(em) + '</b> <span style="color:var(--label-3);font-size:12px;">· ' + keys.length + ' computer' + (keys.length === 1 ? "" : "s") + '</span>'
-        + ' <button class="mini-btn" data-reset-pw="' + escHtml(em) + '" type="button" style="margin-left:8px;">Reset Password</button>'
+        + (hasBeta ? ' <span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">beta tester</span>' : '')
+        + ' <button class="mini-btn" data-toggle-user-beta="' + escHtml(em) + '" type="button" style="margin-left:8px;">' + (hasBeta ? 'Revoke Beta' : 'Grant Beta') + '</button>'
+        + ' <button class="mini-btn" data-reset-pw="' + escHtml(em) + '" type="button" style="margin-left:4px;">Reset Password</button>'
         + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
         var isPending = (mch === "PENDING" || mch.indexOf("PENDING") === 0);
@@ -682,6 +686,22 @@
     });
     if(ub){
       ub.innerHTML = uh;
+      Array.prototype.forEach.call(ub.querySelectorAll("[data-toggle-user-beta]"), function(b){
+        b.onclick = function(){
+          var em = b.getAttribute("data-toggle-user-beta").toLowerCase();
+          var betas = lsGet("pfx-beta-access", {});
+          if(betas[em]){
+            delete betas[em];
+            showToast("Beta revoked for " + em);
+          } else {
+            betas[em] = { email: em, name: em, at: Date.now() };
+            showToast("Beta granted to " + em);
+          }
+          lsSet("pfx-beta-access", betas);
+          renderAdmin();
+          renderAffBeta();
+        };
+      });
       Array.prototype.forEach.call(ub.querySelectorAll("[data-reset-pw]"), function(b){
         b.onclick = function(){
           var em = b.getAttribute("data-reset-pw");
@@ -1018,28 +1038,102 @@
   }
   function toggleAffBeta(id, grant){
     var all = lsGet("pfx-aff-suggestions", {});
-    if(all[id]){ all[id].beta = grant; all[id].at = Date.now(); lsSet("pfx-aff-suggestions", all); showToast(grant ? "Beta granted" : "Beta revoked"); renderAffSuggestions(); renderAffBeta(); }
+    if(all[id]){
+      all[id].beta = grant;
+      all[id].at = Date.now();
+      lsSet("pfx-aff-suggestions", all);
+    }
+    // Also track in global beta access whitelist
+    var betas = lsGet("pfx-beta-access", {});
+    var email = (all[id] && all[id].email) ? all[id].email.toLowerCase() : "";
+    if(email){
+      if(grant){ betas[email] = { email: email, name: all[id].name || email, at: Date.now() }; }
+      else { delete betas[email]; }
+      lsSet("pfx-beta-access", betas);
+    }
+    showToast(grant ? "Beta granted" : "Beta revoked");
+    renderAffSuggestions();
+    renderAffBeta();
   }
 
   /* ---------- Beta Access List ---------- */
   var affBetaRefresh = document.getElementById("affBetaRefresh");
   if(affBetaRefresh){ affBetaRefresh.onclick = function(){ renderAffBeta(); }; }
+
+  var affBetaManualGrant = document.getElementById("affBetaManualGrant");
+  if(affBetaManualGrant){
+    affBetaManualGrant.onclick = function(){
+      var input = document.getElementById("affBetaManualEmail");
+      var val = (input ? input.value : "").trim().toLowerCase();
+      if(!val || val.indexOf("@") === -1){
+        alert("Please enter a valid email address.");
+        return;
+      }
+      var betas = lsGet("pfx-beta-access", {});
+      betas[val] = { email: val, name: val, at: Date.now() };
+      lsSet("pfx-beta-access", betas);
+      if(input) input.value = "";
+      showToast("Beta access granted to " + val);
+      renderAffBeta();
+    };
+  }
+
   function renderAffBeta(){
     var box = document.getElementById("affBetaList");
     if(!box) return;
-    var all = lsGet("pfx-aff-suggestions", {});
-    var betas = Object.values(all).filter(function(s){ return s.beta === true; });
+
+    var allSuggestions = lsGet("pfx-aff-suggestions", {});
+    var betaMap = lsGet("pfx-beta-access", {});
+
+    // Sync any marked beta from suggestions into betaMap
+    Object.values(allSuggestions).forEach(function(s){
+      if(s.beta && s.email){
+        var em = s.email.toLowerCase();
+        if(!betaMap[em]){
+          betaMap[em] = { email: em, name: s.name || em, at: s.at || Date.now(), fromSuggestId: s.id };
+        } else if(s.id) {
+          betaMap[em].fromSuggestId = s.id;
+        }
+      }
+    });
+
+    var items = Object.values(betaMap).sort(function(a,b){ return (b.at||0) - (a.at||0); });
     var html = "";
-    if(!betas.length){ html = '<p style="font-size:13px;color:var(--label-2);">No affiliates have beta access yet.</p>'; }
-    else {
-      betas.forEach(function(s){
-        html += '<div class="coupon-row"><b>' + escHtml(s.name) + '</b> <span style="color:var(--label-3);font-size:11px;">' + escHtml(s.email || "") + '</span>'
-          + '<button class="mini-btn" data-aff-revoke-beta="' + escHtml(s.id) + '" type="button">Revoke Beta</button></div>';
+    if(!items.length){
+      html = '<p style="font-size:13px;color:var(--label-2);">No users or affiliates have beta access yet. Enter an email above to grant access.</p>';
+    } else {
+      items.forEach(function(item){
+        html += '<div class="coupon-row"><div style="flex:1;">'
+          + '<b>' + escHtml(item.name || item.email) + '</b> '
+          + '<span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">beta tester</span><br>'
+          + '<span style="color:var(--label-3);font-size:11px;">' + escHtml(item.email) + (item.at ? ' · Granted ' + new Date(item.at).toLocaleDateString() : '') + '</span>'
+          + '</div>'
+          + '<button class="danger-btn del-cpn-btn" data-revoke-beta-email="' + escHtml(item.email) + '" type="button">Revoke Access</button>'
+          + '</div>';
       });
     }
     box.innerHTML = html;
-    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-revoke-beta]"), function(b){
-      b.onclick = function(){ toggleAffBeta(b.getAttribute("data-aff-revoke-beta"), false); };
+
+    Array.prototype.forEach.call(box.querySelectorAll("[data-revoke-beta-email]"), function(b){
+      b.onclick = function(){
+        var em = b.getAttribute("data-revoke-beta-email").toLowerCase();
+        var betas = lsGet("pfx-beta-access", {});
+        delete betas[em];
+        lsSet("pfx-beta-access", betas);
+
+        // Also revoke in suggestions if linked
+        var allS = lsGet("pfx-aff-suggestions", {});
+        Object.keys(allS).forEach(function(k){
+          if(allS[k] && allS[k].email && allS[k].email.toLowerCase() === em){
+            allS[k].beta = false;
+          }
+        });
+        lsSet("pfx-aff-suggestions", allS);
+
+        showToast("Beta access revoked for " + em);
+        renderAffBeta();
+        renderAffSuggestions();
+      };
     });
   }
 
