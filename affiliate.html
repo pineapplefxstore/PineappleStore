@@ -55,7 +55,7 @@
     </div>
   </div>
 
-  <div class="lic-form" style="margin-top:40px">
+  <div class="lic-form" id="aff-reqs-box" style="margin-top:40px">
     <b style="font-size:16px;">Requirements</b>
     <ul style="color:var(--label-2);margin-top:10px;line-height:1.8;padding-left:20px">
       <li>At least <b>40 subscribers</b> on your channel.</li>
@@ -63,6 +63,61 @@
       <li>Provide a valid email (Gmail preferred) — your free coupon code will be sent here if approved.</li>
       <li>Agree to the terms &amp; conditions below — including mentioning PineappleFX in your videos.</li>
     </ul>
+  </div>
+</div></section>
+
+<!-- Partner Portal: Visible to approved affiliates & owner -->
+<section id="aff-partner-portal" style="display:none;"><div class="wrap" style="max-width:680px">
+  <div class="lic-form" style="margin-top:20px;border:1px solid rgba(254,202,8,0.3);background:rgba(254,202,8,0.04);">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">⭐</span>
+        <div>
+          <b style="font-size:17px;color:#fff;">Affiliate Partner Dashboard</b>
+          <p id="portalUserBadge" style="font-size:12px;color:var(--label-2);margin:2px 0 0;"></p>
+        </div>
+      </div>
+      <span class="tag" style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;font-size:11px;font-weight:700;">ACTIVE PARTNER</span>
+    </div>
+
+    <!-- Active Coupon Details -->
+    <div id="portalCouponCard" style="margin:12px 0;padding:12px;background:var(--grouped);border-radius:10px;border:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--label-2);">Your Official 20% Discount Code for Followers:</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+        <code id="portalCouponCode" style="font-size:15px;color:#feca08;font-weight:700;letter-spacing:1px;">--</code>
+        <button class="mini-btn" id="portalCopyCpn" type="button">Copy Code</button>
+      </div>
+    </div>
+
+    <!-- Beta Build Access -->
+    <div style="margin:16px 0;padding:14px;background:var(--grouped);border-radius:10px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:20px;">🧪</span>
+        <div>
+          <b style="font-size:14px;color:#fff;">Beta Builds &amp; Early Access</b>
+          <p style="font-size:12px;color:var(--label-2);margin:2px 0 0;">Download early testing versions of PineappleFX before public release.</p>
+        </div>
+      </div>
+      <div id="portalBetaArea" style="margin-top:12px;">
+        <button class="btn btn-pay" id="portalDlBeta" type="button" style="padding:8px 16px;font-size:12.5px;">⬇ Download Latest Beta Build (.zxp)</button>
+      </div>
+    </div>
+
+    <!-- Suggestions & Feature Requests -->
+    <div style="margin:16px 0 0;padding:14px;background:var(--grouped);border-radius:10px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:20px;">💬</span>
+        <div>
+          <b style="font-size:14px;color:#fff;">Affiliate Suggestions &amp; Feature Requests</b>
+          <p style="font-size:12px;color:var(--label-2);margin:2px 0 0;">Submit ideas, roadmap requests, or report issues directly to the admin.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="text" id="portalSugInp" placeholder="Describe your suggestion or feature idea…" style="flex:1;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:13px;" />
+        <button class="btn btn-pay" id="portalSugBtn" type="button" style="padding:9px 16px;font-size:13px;white-space:nowrap;">Send</button>
+      </div>
+      <p id="portalSugSuccess" style="display:none;color:#22c55e;font-size:12px;margin:8px 0 0;">✓ Suggestion received! The admin reviews all partner requests.</p>
+    </div>
   </div>
 </div></section>
 
@@ -267,6 +322,117 @@
       }, 1500);
     };
   }
+
+  /* ---- Check if current user is an approved affiliate or owner ---- */
+  function syncAffiliatePortal(){
+    var acct = "";
+    try {
+      acct = (window.PFXAuth && window.PFXAuth.session()) || localStorage.getItem("pfx-session") || "";
+    } catch(e){}
+    acct = String(acct || "").trim().toLowerCase();
+
+    var isOwner = false;
+    try {
+      if(window.PFXCore && window.PFXCore.isOwner) isOwner = window.PFXCore.isOwner();
+      if(!isOwner && window.PFXCore && window.PFXCore.ADMIN_EMAIL){
+        isOwner = (acct === window.PFXCore.ADMIN_EMAIL.toLowerCase());
+      }
+    } catch(e){}
+
+    var isAffiliate = isOwner;
+    var affData = null;
+    try {
+      var allApps = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+      Object.values(allApps).forEach(function(a){
+        if(a.email && a.email.toLowerCase() === acct && a.status === "approved"){
+          isAffiliate = true;
+          affData = a;
+        }
+      });
+    } catch(e){}
+
+    var portal = document.getElementById("aff-partner-portal");
+    var applySec = document.getElementById("aff-apply");
+    var reqsBox = document.getElementById("aff-reqs-box");
+
+    if(isAffiliate && portal){
+      // Show portal, hide apply form and requirements
+      portal.style.display = "block";
+      if(applySec) applySec.style.display = "none";
+      if(reqsBox) reqsBox.style.display = "none";
+
+      var badge = document.getElementById("portalUserBadge");
+      if(badge) badge.textContent = "Logged in as " + acct + (isOwner ? " (Store Owner)" : " (Verified Affiliate)");
+
+      var cpnCode = document.getElementById("portalCouponCode");
+      var codeVal = (affData && affData.couponCode) ? affData.couponCode : (isOwner ? "OWNER-ALL-ACCESS" : "AFX-PARTNER-20");
+      if(cpnCode) cpnCode.textContent = codeVal;
+
+      var copyBtn = document.getElementById("portalCopyCpn");
+      if(copyBtn){
+        copyBtn.onclick = function(){
+          try {
+            if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codeVal);
+          } catch(e){}
+          copyBtn.textContent = "Copied!";
+          setTimeout(function(){ copyBtn.textContent = "Copy Code"; }, 2000);
+        };
+      }
+
+      // Download beta build
+      var dlBeta = document.getElementById("portalDlBeta");
+      if(dlBeta){
+        dlBeta.onclick = function(){
+          var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
+          var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
+          if(betaZxp){
+            var a = document.createElement("a"); a.href = betaZxp; a.download = betaName;
+            document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
+          } else {
+            // Fallback to production zxp
+            var a2 = document.createElement("a"); a2.href = "./downloads/PineappleFX.zxp"; a2.download = "PineappleFX.zxp";
+            document.body.appendChild(a2); a2.click(); setTimeout(function(){ document.body.removeChild(a2); }, 200);
+          }
+        };
+      }
+
+      // Submit suggestions
+      var sugBtn = document.getElementById("portalSugBtn");
+      if(sugBtn){
+        sugBtn.onclick = function(){
+          var inp = document.getElementById("portalSugInp");
+          var msg = (inp ? inp.value : "").trim();
+          if(!msg) return;
+          var allSug = JSON.parse(localStorage.getItem("pfx-aff-suggestions") || "{}");
+          var id = "sug-" + Date.now().toString(36) + "-" + Math.floor(Math.random()*1e9).toString(36);
+          allSug[id] = {
+            id: id,
+            name: (affData && affData.name) || acct.split("@")[0],
+            email: acct,
+            type: "Feature Request / Roadmap",
+            message: msg,
+            status: "open",
+            beta: true,
+            at: Date.now()
+          };
+          localStorage.setItem("pfx-aff-suggestions", JSON.stringify(allSug));
+          if(inp) inp.value = "";
+          var successMsg = document.getElementById("portalSugSuccess");
+          if(successMsg){
+            successMsg.style.display = "block";
+            setTimeout(function(){ successMsg.style.display = "none"; }, 4000);
+          }
+        };
+      }
+    } else if(portal) {
+      portal.style.display = "none";
+      if(applySec) applySec.style.display = "block";
+      if(reqsBox) reqsBox.style.display = "block";
+    }
+  }
+
+  syncAffiliatePortal();
+  window.addEventListener("storage", syncAffiliatePortal);
 })();
 </script>
 <a class="support-fab" href="https://t.me/PineappleFxstore_bot" target="_blank" rel="noopener noreferrer" aria-label="Need Help & Support?"><span class="tg-icon">💬</span><span class="fab-label">Need Help &amp; Support?</span></a>
