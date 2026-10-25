@@ -22,7 +22,7 @@
     <a class="nl" href="admin" id="navAdmin" style="display:none;">Admin</a>
     <button class="tbtn" id="themeBtn" title="Toggle dark / light">☾</button>
     <div class="acct-wrap">
-      <button class="tbtn acct-btn" id="acctBtn" title="Account">👤 Account</button>
+      <button class="tbtn acct-btn" id="acctBtn" title="Account"><span class="acct-avatar">👤</span>Account</button>
       <div class="acct-menu" id="acctMenu">
         <a href="dashboard">My Licenses</a>
         <a href="admin" id="menuAdmin" style="display:none;">Admin Panel</a>
@@ -68,34 +68,66 @@
 
 <section id="aff-apply"><div class="wrap" style="max-width:640px">
   <div class="lic-form">
-    <b style="font-size:16px;">Apply now</b>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:20px;">📝</span>
+      <b style="font-size:16px;">Apply now</b>
+    </div>
     <p style="font-size:13px;color:var(--label-2);margin-top:6px;">We review applications within a few days. If approved, you'll receive a free coupon code by email — no payment, no money involved.</p>
 
     <form id="affForm" novalidate>
-      <label for="affName">Your name / channel name<input id="affName" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Alex on YouTube" /></label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">👤</span>
+        <label for="affName" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Your name / channel name</label>
+        <span id="affNameStatus" style="font-size:14px;color:#ff6961;">⚠</span>
+      </div>
+      <input id="affName" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Alex on YouTube" />
 
-      <label for="affEmail">Email (Gmail preferred)<input id="affEmail" type="email" autocomplete="email" placeholder="you@gmail.com" /></label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">📧</span>
+        <label for="affEmail" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Email (Gmail preferred)</label>
+        <span id="affEmailStatus" style="font-size:14px;color:#ff6961;">⚠</span>
+      </div>
+      <input id="affEmail" type="email" autocomplete="email" placeholder="you@gmail.com" />
 
-      <label for="affPlatform">Platform<select id="affPlatform">
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">▶</span>
+        <label for="affPlatform" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Platform</label>
+      </div>
+      <select id="affPlatform">
         <option value="youtube">YouTube</option>
         <option value="instagram">Instagram</option>
         <option value="tiktok">TikTok</option>
         <option value="twitter">X / Twitter</option>
-      </select></label>
+      </select>
 
-      <label for="affChannelId">Channel / user ID<input id="affChannelId" class="mono" type="text" maxlength="80" autocomplete="off" placeholder="e.g. UCxxx… or @handle" /></label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">🔗</span>
+        <label for="affChannelId" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Channel / user ID</label>
+        <span id="affChannelStatus" style="font-size:14px;color:#ff6961;">⚠</span>
+      </div>
+      <input id="affChannelId" class="mono" type="text" maxlength="80" autocomplete="off" placeholder="E . G . . UCXXX… OR @HANDLE" />
 
-      <label for="affSubs">Subscriber count<input id="affSubs" type="number" min="0" placeholder="e.g. 120" /></label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">👥</span>
+        <label for="affSubs" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Subscriber count</label>
+        <span id="affSubsStatus" style="font-size:14px;color:#ff6961;">⚠</span>
+      </div>
+      <input id="affSubs" type="number" min="0" placeholder="e.g. 120" />
       <span class="lic-hint" id="subHint" style="color:#ff6961;">You need at least 40 subscribers.</span>
 
-      <label for="affInsights">Channel insights (what your audience likes, content type, why PineappleFX fits)<textarea id="affInsights" rows="4" placeholder="Tell us about your channel and audience…" style="display:block;width:100%;margin-top:6px;background:var(--grouped);border:none;border-radius:12px;color:var(--label);padding:12px 14px;font-size:15px;font-family:inherit;outline:none;"></textarea></label>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;">
+        <span style="font-size:16px;">💬</span>
+        <label for="affInsights" style="font-size:13px;font-weight:600;color:var(--label-2);margin:0;flex:1;">Channel insights</label>
+      </div>
+      <textarea id="affInsights" rows="4" placeholder="Tell us about your channel and audience…" style="display:block;width:100%;margin-top:6px;background:var(--grouped);border:none;border-radius:12px;color:var(--label);padding:12px 14px;font-size:15px;font-family:inherit;outline:none;"></textarea>
+      <span class="lic-hint" style="color:var(--label-3);font-size:12px;">What your audience likes, content type, why PineappleFX fits</span>
 
-      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;">
-        <input id="affTerms" type="checkbox" />
-        <label for="affTerms" style="font-size:13px;color:var(--label-2);margin:0;">I agree to the <a href="#" id="affTermsLink" style="color:var(--accent);font-weight:600;">Affiliate Terms &amp; Conditions</a>.</label>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:14px;">
+        <input id="affTerms" type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);margin-top:2px;" />
+        <label for="affTerms" style="font-size:13px;color:var(--label-2);margin:0;line-height:1.5;">I agree to the <a href="#" id="affTermsLink" style="color:var(--accent);font-weight:600;text-decoration:underline;">Affiliate Terms &amp; Conditions</a>.</label>
       </div>
       <p class="auth-err" id="affErr" style="min-height:18px;"></p>
-      <button class="btn btn-pay" id="affApplyBtn" type="button" style="width:100%;">Apply to Affiliate Program</button>
+      <button class="btn btn-pay" id="affApplyBtn" type="button" style="width:100%;margin-top:4px;">Apply to Affiliate Program</button>
     </form>
   </div>
 </div></section>
@@ -135,12 +167,38 @@
   if(termsLink) termsLink.onclick = function(e){ if(e && e.preventDefault) e.preventDefault(); termsSec.style.display = ""; };
   if(termsClose) termsClose.onclick = function(){ termsSec.style.display = "none"; };
 
+  // Status dot helpers (green check / red warning like Apple design)
+  function setStatus(id, ok){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = ok ? "✓" : "⚠";
+    el.style.color = ok ? "#30d158" : "#ff6961";
+  }
+  function validateField(){}
+
   var subInput = document.getElementById("affSubs");
   var subHint = document.getElementById("subHint");
   if(subInput){ subInput.oninput = function(){
     var n = parseInt(subInput.value || "0", 10);
-    if(subHint){ subHint.style.display = (n >= 40) ? "none" : ""; subHint.textContent = n >= 40 ? "" : "You need at least 40 subscribers."; }
+    var ok = n >= 40;
+    if(subHint){ subHint.style.display = ok ? "none" : ""; subHint.textContent = ok ? "" : "You need at least 40 subscribers."; }
+    setStatus("affSubsStatus", ok);
   }; }
+
+  // Real-time validation on all inputs
+  var fields = {
+    affName: function(){ var v = (document.getElementById("affName").value || "").trim(); return v.length >= 2; },
+    affEmail: function(){ var v = (document.getElementById("affEmail").value || "").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); },
+    affChannelId: function(){ var v = (document.getElementById("affChannelId").value || "").trim(); return v.length >= 3; },
+    affSubs: function(){ return parseInt((document.getElementById("affSubs").value || "0"), 10) >= 40; },
+    affInsights: function(){ var v = (document.getElementById("affInsights").value || "").trim(); return v.length >= 10; }
+  };
+  Object.keys(fields).forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.oninput = function(){ setStatus(id + "Status", fields[id]()); };
+    el.onblur = function(){ setStatus(id + "Status", fields[id]()); };
+  });
 
   var form = document.getElementById("affForm");
   var btn = document.getElementById("affApplyBtn");
@@ -155,6 +213,13 @@
       var subs = parseInt((document.getElementById("affSubs").value || "0"), 10);
       var insights = (document.getElementById("affInsights").value || "").trim();
       var terms = document.getElementById("affTerms").checked;
+
+      // Validate all fields and show status dots
+      var allOk = true;
+      Object.keys(fields).forEach(function(id){ setStatus(id + "Status", fields[id]()); if(!fields[id]()) allOk = false; });
+      if(!terms){ allOk = false; }
+      if(!allOk){ err.textContent = "Please fix the highlighted fields above."; return; }
+
       if(!name){ err.textContent = "Enter your name or channel name."; return; }
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "Enter a valid email."; return; }
       if(!channelId){ err.textContent = "Enter your channel / user ID."; return; }
@@ -179,7 +244,6 @@
         created: Date.now()
       };
 
-      // Save locally so the admin can review it
       var all = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
       all[application.id] = application;
       localStorage.setItem("pfx-aff-applications", JSON.stringify(all));
@@ -195,6 +259,7 @@
         document.getElementById("affSubs").value = "";
         document.getElementById("affInsights").value = "";
         document.getElementById("affTerms").checked = false;
+        ["affName","affEmail","affChannelId","affSubs","affInsights"].forEach(function(id){ setStatus(id+"Status", false); });
         btn.disabled = false;
         btn.textContent = "Apply to Affiliate Program";
         btn.style.background = "";
