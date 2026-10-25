@@ -43,7 +43,7 @@ def ok(msg):
 
 # ---- 1. required pages & assets -------------------------------------------
 for rel in ('index.html', 'store.html', 'dashboard.html',
-            'faq.html', 'admin.html', 'affiliate.html', 'success.html', '404.html',
+            'faq.html', 'admin.html', 'affiliate.html', 'privacy.html', 'terms.html', 'success.html', '404.html',
             'assets/site.css', 'assets/premium.css', 'assets/logo.png',
             'assets/pfx-core.js', 'assets/pfx-preview.js',
             'assets/pfx-licensing.js', 'assets/pfx-admin.js',
@@ -53,7 +53,7 @@ for rel in ('index.html', 'store.html', 'dashboard.html',
 
 # ---- 1b. clean URLs: no internal page links may end in .html ---------------
 for page in ('index.html', 'store.html', 'dashboard.html',
-             'faq.html', 'admin.html', 'affiliate.html', 'success.html', '404.html'):
+             'faq.html', 'admin.html', 'affiliate.html', 'privacy.html', 'terms.html', 'success.html', '404.html'):
     p = SITE / page
     if not p.exists():
         continue
@@ -67,7 +67,7 @@ for page in ('index.html', 'store.html', 'dashboard.html',
 
 # ---- 2. relative paths only (GitHub Pages serves a /<repo>/ subpath) ------
 for page in ('index.html', 'store.html', 'dashboard.html',
-             'faq.html', 'admin.html', 'affiliate.html', 'success.html'):
+             'faq.html', 'admin.html', 'affiliate.html', 'privacy.html', 'terms.html', 'success.html'):
     p = SITE / page
     if not p.exists():
         continue
