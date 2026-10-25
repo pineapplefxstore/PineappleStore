@@ -516,10 +516,32 @@ window.PineappleFXLic = (function(){
     var vault = (window.PFXVault && window.PFXVault.get(acct)) || {};
     var machines = Object.keys(vault).sort();
     var primary = machines.length ? primaryOf(vault, machines) : null;
+
+    // Check if current user is an approved beta tester
+    var isBetaTester = false;
+    try {
+      var betaList = JSON.parse(localStorage.getItem("pfx-beta-access") || "{}");
+      if(betaList[acct.toLowerCase()]) isBetaTester = true;
+    } catch(e){}
+
     var html = '<p style="font-size:13px;color:var(--label-2);">Logged in as <b>' + esc(acct) + '</b> '
+      + (isBetaTester ? '<span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;margin:0 4px;">🧪 BETA TESTER</span>' : '')
       + '· ' + machines.length + ' machine' + (machines.length === 1 ? '' : 's')
       + ' · <a href="#" id="dashLogout" style="color:var(--accent);font-weight:700;">log out</a></p>'
       + '<div style="height:10px;"></div>';
+
+    // Show Beta Download Card for Beta Testers
+    if(isBetaTester){
+      var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
+      var betaVer = localStorage.getItem("pfx-beta-installer-version") || "Beta Preview";
+      var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
+      html += '<div style="margin-bottom:14px;padding:12px;background:rgba(254,202,8,0.08);border:1px solid rgba(254,202,8,0.3);border-radius:10px;">'
+        + '<b style="color:var(--accent);font-size:13px;">🧪 Beta Access Active</b>'
+        + '<p style="font-size:12px;color:var(--label-2);margin:4px 0 8px;">You have early access to test PineappleFX beta builds (' + esc(betaVer) + '). Install this build in After Effects with your license key.</p>'
+        + (betaZxp ? '<button class="btn btn-pay" id="dashDlBeta" type="button" style="padding:7px 14px;font-size:12px;">⬇ Download ' + esc(betaName) + '</button>'
+                  : '<span style="font-size:11.5px;color:var(--label-3);">No custom beta .zxp uploaded yet — using default build.</span>')
+        + '</div>';
+    }
     if(!machines.length){
       html += '<p style="font-size:13.5px;color:var(--label-2);text-align:center;">No licenses yet — pay or claim a coupon above and your keys will appear here.</p>';
     } else {
@@ -547,6 +569,17 @@ window.PineappleFXLic = (function(){
       if(e && e.preventDefault) e.preventDefault();
       if(window.PFXAuth) window.PFXAuth.logout();
     };
+    var dashDlBetaBtn = document.getElementById("dashDlBeta");
+    if(dashDlBetaBtn){
+      dashDlBetaBtn.onclick = function(){
+        var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
+        var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
+        if(betaZxp){
+          var a = document.createElement("a"); a.href = betaZxp; a.download = betaName;
+          document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
+        }
+      };
+    }
     Array.prototype.forEach.call(box.querySelectorAll("[data-copy-key]"), function(b){
       b.onclick = function(){ copyKey(b.getAttribute("data-copy-key"), b); };
     });

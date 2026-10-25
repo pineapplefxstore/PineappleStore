@@ -677,7 +677,9 @@
         + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
         var isPending = (mch === "PENDING" || mch.indexOf("PENDING") === 0);
+        var cpnUsed = ms[mch].coupon ? '<span class="tag" style="background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;font-size:11px;margin-right:6px;" title="Coupon used at checkout">Coupon: ' + escHtml(ms[mch].coupon) + '</span>' : '';
         uh += '<div class="dash-row" style="margin:8px 0 0;"><span class="mid" style="' + (isPending ? 'color:var(--accent);font-weight:700;' : '') + '">' + escHtml(mch) + '</span>'
+          + cpnUsed
           + '<span class="key">' + escHtml(ms[mch].key || "") + '</span>'
           + '<button class="mini-btn bind-btn" data-rebind-local="' + escHtml(em + "|" + mch) + '" type="button">' + (isPending ? 'Activate PC' : 'Change PC') + '</button>'
           + '<button class="danger-btn revoke-lic-btn" data-revoke="' + escHtml(em + "|" + mch) + '" type="button">Revoke License</button></div>';
@@ -1056,9 +1058,46 @@
     renderAffBeta();
   }
 
-  /* ---------- Beta Access List ---------- */
+  /* ---------- Beta Access List & Builds ---------- */
   var affBetaRefresh = document.getElementById("affBetaRefresh");
   if(affBetaRefresh){ affBetaRefresh.onclick = function(){ renderAffBeta(); }; }
+
+  var betaUploadBtn = document.getElementById("betaUploadBtn");
+  if(betaUploadBtn){
+    betaUploadBtn.onclick = function(){
+      var err = document.getElementById("betaErr");
+      var out = document.getElementById("betaResult");
+      err.textContent = ""; out.style.display = "none";
+      var file = document.getElementById("betaFile").files && document.getElementById("betaFile").files[0];
+      var ver = (document.getElementById("betaVersion").value || "").trim();
+      if(!file){ err.textContent = "Pick a beta .zxp file first."; return; }
+      if(!/\.zxp$/i.test(file.name)){ err.textContent = "File must be a .zxp."; return; }
+      if(!ver){ err.textContent = "Enter a beta version (e.g. 2.1.0-beta.1)."; return; }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var ab = reader.result;
+        var bytes = new Uint8Array(ab.slice(0,4));
+        if(bytes[0]!==0x50 || bytes[1]!==0x4b){ err.textContent = "That doesn't look like a valid .zxp (zip)."; return; }
+        var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(ab)));
+        var dataUrl = "data:application/zip;base64," + b64;
+        try {
+          localStorage.setItem("pfx-beta-installer-zxp", dataUrl);
+          localStorage.setItem("pfx-beta-installer-version", ver);
+          localStorage.setItem("pfx-beta-installer-updated", String(Date.now()));
+          localStorage.setItem("pfx-beta-installer-filename", file.name);
+        } catch(e){ err.textContent = "Could not save locally (browser storage full?)."; return; }
+        out.style.display = "";
+        out.innerHTML = '<p style="color:#22c55e;font-size:12px;">✅ Beta installer updated to <b>' + escHtml(ver) + '</b> (' + Math.round(ab.byteLength/1024) + ' KB). Beta testers will receive this build in their dashboard.</p>'
+          + '<button class="mini-btn" id="betaDownloadTest" type="button" style="margin-top:4px;">Test Download Beta .zxp</button>';
+        document.getElementById("betaDownloadTest").onclick = function(){
+          var a = document.createElement("a"); a.href = dataUrl; a.download = file.name || ("PineappleFX-" + ver + ".zxp");
+          document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
+        };
+        showToast("Beta build uploaded: " + ver);
+      };
+      reader.readAsArrayBuffer(file);
+    };
+  }
 
   var affBetaManualGrant = document.getElementById("affBetaManualGrant");
   if(affBetaManualGrant){
@@ -1187,20 +1226,20 @@
     var app = all[id];
     if(!app) return;
     if(app.status !== "pending"){ showToast("Already processed."); return; }
-    // Generate a free affiliate coupon code: AFX-{username}-{random}
+    // Generate a 20% discount coupon code for this affiliate: AFX-{username}-{random}
     var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
     for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
     var uname = String(app.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) || "PARTNER";
     var code = "AFX-" + uname + "-" + s.slice(4);
-    // Sign it so the partner can use the code on their own device (and so the
-    // code validates for buyers on other devices) — minting still needs the server.
+    // Sign it with 20% discount so buyers from anywhere can use it securely
+    var pctDiscount = 20;
     if(window.PFXCoupons && window.PFXCoupons.shareable){
-      var signedAff = window.PFXCoupons.shareable(code, 0, "free");
+      var signedAff = window.PFXCoupons.shareable(code, pctDiscount, "percent");
       if(signedAff) code = signedAff;
     }
     var coupons = window.PFXCoupons ? window.PFXCoupons.all() : {};
     if(coupons[code]){ showToast("Code collision, retry."); return; }
-    var def = { kind: "free", pct: 0, note: "Affiliate: " + escHtml(app.name) + " (" + escHtml(app.platform) + ")", maxUses: null, uses: 0, created: Date.now(), program: "affiliate", platform: app.platform, channelId: app.channelId };
+    var def = { kind: "percent", pct: pctDiscount, note: "Affiliate 20% off: " + escHtml(app.name) + " (" + escHtml(app.platform) + ")", maxUses: null, uses: 0, created: Date.now(), program: "affiliate", platform: app.platform, channelId: app.channelId };
     var r = window.PFXCoupons.create(code, def);
     if(!r.ok){ showToast("Coupon create failed: " + r.error); return; }
     app.status = "approved";
