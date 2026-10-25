@@ -429,6 +429,20 @@
       v[email][machine] = entry;
       lsSet("pfx-licenses", v);
       return entry;
+    },
+    rebind: function(email, oldMachine, newMachine, newKey){
+      var v = window.PFXVault.all();
+      oldMachine = String(oldMachine || "").toUpperCase();
+      newMachine = String(newMachine || "").toUpperCase();
+      if(!v[email] || !v[email][oldMachine]) return false;
+      var entry = v[email][oldMachine];
+      delete v[email][oldMachine];
+      entry.machine = newMachine;
+      if(newKey) entry.key = newKey;
+      entry.at = Date.now();
+      v[email][newMachine] = entry;
+      lsSet("pfx-licenses", v);
+      return entry;
     }
   };
   window.PFXPricing = { basePrice: basePrice, halfPrice: halfPrice, launchActive: launchActive };

@@ -672,8 +672,10 @@
         + ' <button class="mini-btn" data-reset-pw="' + escHtml(em) + '" type="button" style="margin-left:8px;">Reset Password</button>'
         + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
-        uh += '<div class="dash-row" style="margin:8px 0 0;"><span class="mid">' + escHtml(mch) + '</span>'
+        var isPending = (mch === "PENDING" || mch.indexOf("PENDING") === 0);
+        uh += '<div class="dash-row" style="margin:8px 0 0;"><span class="mid" style="' + (isPending ? 'color:var(--accent);font-weight:700;' : '') + '">' + escHtml(mch) + '</span>'
           + '<span class="key">' + escHtml(ms[mch].key || "") + '</span>'
+          + '<button class="mini-btn bind-btn" data-rebind-local="' + escHtml(em + "|" + mch) + '" type="button">' + (isPending ? 'Activate PC' : 'Change PC') + '</button>'
           + '<button class="danger-btn revoke-lic-btn" data-revoke="' + escHtml(em + "|" + mch) + '" type="button">Revoke License</button></div>';
       });
       uh += "</div>";
@@ -721,6 +723,31 @@
             renderAdmin();
             if(window.PineappleFXLic && window.PineappleFXLic.refreshDashboard) window.PineappleFXLic.refreshDashboard();
           });
+        };
+      });
+      Array.prototype.forEach.call(ub.querySelectorAll("[data-rebind-local]"), function(b){
+        b.onclick = function(){
+          var parts = b.getAttribute("data-rebind-local").split("|");
+          var em = parts[0], oldMch = parts[1];
+          var nm = prompt("Enter Machine ID for " + em + " (8 characters from After Effects panel):", "");
+          if(!nm) return;
+          nm = nm.trim().toUpperCase();
+          if(!/^[A-Za-z0-9]{8}$/.test(nm)){
+            alert("Machine ID must be exactly 8 letters/numbers.");
+            return;
+          }
+          var newKey = adminMintKey(nm);
+          if(!newKey){
+            alert("Failed to calculate key for that Machine ID.");
+            return;
+          }
+          if(window.PFXVault && window.PFXVault.rebind){
+            window.PFXVault.rebind(em, oldMch, nm, newKey);
+            showToast("License bound to " + nm);
+            renderAdmin();
+            if(window.PineappleFXLic && window.PineappleFXLic.refreshDashboard) window.PineappleFXLic.refreshDashboard();
+            alert("New key for " + nm + ":\n" + newKey + "\n\n(Key updated in user vault)");
+          }
         };
       });
       Array.prototype.forEach.call(ub.querySelectorAll("[data-revoke]"), function(b){

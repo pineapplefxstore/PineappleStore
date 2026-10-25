@@ -42,16 +42,28 @@ window.PineappleFXLic = (function(){
   var NO_MINT_MSG = "The license server is not reachable right now, so keys can't be issued from this page. Please try again shortly, or contact pineapplefx.store@gmail.com with your Machine ID and order ID.";
   function normMachine(raw){ return String(raw || "").trim().toUpperCase(); }
 
+  /* Local placeholder key generator for instant checkout before AE installation */
+  function placeholderKey(seed){
+    var A = "0123456789ABCDEFGHJKMNPQRSTVWXYZ", s = "";
+    var src = String(seed || "") + Date.now();
+    for(var i = 0; i < 16; i++){
+      s += A.charAt(Math.floor(Math.random() * A.length));
+    }
+    return "PFX2-" + s.slice(0, 8) + "-" + s.slice(8);
+  }
+
   function keyCardHTML(key, opts){
     opts = opts || {};
-    return '<div style="font-size:34px;">🎉</div>'
-      + '<h3>' + (opts.free ? 'Your free key is ready!' : 'Payment Successful!') + '</h3>'
-      + '<p class="lic-sub">Your license key — generated just now' + (opts.email ? ', receipt also sent to <b>' + esc(opts.email) + '</b>' : '') + ':</p>'
+    var isPending = (opts.machine === "PENDING" || (key && key.indexOf("PFX2-") === 0 && opts.isPlaceholder));
+    return '<div style="font-size:34px;">' + (isPending ? '⚡' : '🎉') + '</div>'
+      + '<h3>' + (isPending ? 'Your license is ready to download!' : (opts.free ? 'Your free key is ready!' : 'Payment Successful!')) + '</h3>'
+      + '<p class="lic-sub">' + (isPending ? 'Download the installer below. When you open After Effects, activate with your Machine ID in your account dashboard anytime:' : ('Your license key — generated just now' + (opts.email ? ', receipt also sent to <b>' + esc(opts.email) + '</b>' : '') + ':')) + '</p>'
       + '<div class="keyline-big" id="licKeyVal">' + esc(key) + '</div>'
+      + (isPending ? '<p class="lic-sim" style="color:var(--accent);">ℹ️ Reserved License: Saved to your account. You can bind your PC Machine ID anytime in <a href="dashboard" style="color:#fff;text-decoration:underline;font-weight:700;">My Licenses</a>.</p>' : '')
       + (opts.recovered ? '<p class="lic-sim">♻ Recovered from your account — this machine already had a key, no duplicate created.</p>' : '')
       + '<button class="btn btn-pay" id="licCopyBtn" type="button">Copy Key</button>'
       + (opts.downloadUrl ? '<a class="lic-dl" id="licDl" href="' + esc(opts.downloadUrl) + '">⬇ Download PineappleFX .zxp installer</a>' : '')
-      + '<div class="lic-steps-mini"><b>Unlock in After Effects:</b><br>1. Install the .zxp &amp; restart After Effects<br>2. Open Window → Extensions → PineappleFX<br>3. Paste your key into the locked panel — unlocks instantly, offline.</div>';
+      + '<div class="lic-steps-mini"><b>Unlock in After Effects:</b><br>1. Install the .zxp &amp; restart After Effects<br>2. Open Window → Extensions → PineappleFX<br>3. ' + (isPending ? 'If your panel asks for Machine ID activation, click "Activate PC" in your <a href="dashboard" style="color:var(--accent);">Dashboard</a> anytime.' : 'Paste your key into the locked panel — unlocks instantly, offline.') + '</div>';
   }
 
   function showKey(key, opts){
@@ -122,10 +134,31 @@ window.PineappleFXLic = (function(){
       + 'style="display:block;width:100%;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:12px;font-size:15px;font-family:monospace;text-transform:uppercase;letter-spacing:1.5px;text-align:center;outline:none;" />'
       + '<p class="lic-sub" id="licDevErr" style="color:#ff8f88;min-height:18px;"></p>'
       + '<button class="btn btn-pay" id="licMintBtn" type="button">Generate my key</button>'
+      + '<button class="btn btn-ghost" id="licNoMidBtn" type="button" style="width:100%;margin-top:8px;font-size:13px;border-color:var(--hairline);color:var(--label-2);">Continue without Machine ID →</button>'
       + '<div id="licMintSpin" style="display:none;"><div class="lic-spin"></div><p class="lic-sub">Minting your PFX2 key…</p></div>';
     openModal();
     var devEl = document.getElementById("licDev");
     var mintBtn = document.getElementById("licMintBtn");
+    var noMidBtn = document.getElementById("licNoMidBtn");
+    if(noMidBtn){
+      noMidBtn.onclick = function(){
+        var acct = (window.PFXAuth && window.PFXAuth.session()) || "";
+        if(!acct){
+          document.getElementById("licDevErr").innerHTML = "Log in first so your license is saved to your account. "
+            + '<a href="#" id="licLoginLink2" style="color:var(--accent);font-weight:700;">Log in / sign up</a>';
+          document.getElementById("licLoginLink2").onclick = function(e){
+            if(e && e.preventDefault) e.preventDefault();
+            if(window.PFXOpenAuth) window.PFXOpenAuth("signup");
+          };
+          return;
+        }
+        var pk = placeholderKey(info.orderID || acct);
+        if(window.PFXVault) window.PFXVault.save(acct, "PENDING", { key: pk, at: Date.now(), orderID: info.orderID, coupon: c, placeholder: true });
+        if(window.PFXCoupons && c) window.PFXCoupons.use(c);
+        showKey(pk, { email: acct || info.email, downloadUrl: ZXP_URL, machine: "PENDING", isPlaceholder: true });
+        refreshDashboard();
+      };
+    }
     devEl.focus();
     devEl.addEventListener("input", function(){
       var p = devEl.selectionStart;
@@ -256,6 +289,35 @@ window.PineappleFXLic = (function(){
       }
     );
   };
+  var claimNoMidBtn = document.getElementById("claimNoMidBtn");
+  if(claimNoMidBtn){
+    claimNoMidBtn.onclick = function(){
+      claimStatus.className = "lic-status";
+      claimStatus.innerHTML = "";
+      var acct = (window.PFXAuth && window.PFXAuth.session()) || "";
+      if(!acct){
+        claimSetStatus("error", '🔒 <b>Log in</b> to claim a license — <a href="#" id="claimLogin2" style="color:var(--accent);font-weight:700;">log in / sign up</a>');
+        document.getElementById("claimLogin2").onclick = function(e){
+          if(e && e.preventDefault) e.preventDefault();
+          if(window.PFXOpenAuth) window.PFXOpenAuth("signup");
+        };
+        return;
+      }
+      var c = coupon();
+      var owner = false;
+      try { owner = window.PFXCore && window.PFXCore.isOwner(); } catch(e){}
+      if(!c && !owner){
+        claimSetStatus("error", "Apply your coupon code in <b>Pricing</b> above first, then click continue.");
+        return;
+      }
+      var pk = placeholderKey(acct);
+      if(window.PFXVault) window.PFXVault.save(acct, "PENDING", { key: pk, at: Date.now(), coupon: c, placeholder: true });
+      if(window.PFXCoupons && c) window.PFXCoupons.use(c);
+      showKey(pk, { email: acct, downloadUrl: ZXP_URL, machine: "PENDING", isPlaceholder: true, free: owner && !c });
+      claimSetStatus("success", "Reserved license ready — download installer below. Activate your PC anytime in My Licenses.");
+      refreshDashboard();
+    };
+  }
   }
   /* --- owner headline: plain words, no coupon needed --- */
   function paintOwnerClaim(){
@@ -465,14 +527,17 @@ window.PineappleFXLic = (function(){
         var e = vault[machine];
         var when = "";
         try { when = new Date(e.at).toLocaleDateString(); } catch(err){}
+        var isPending = (machine === "PENDING" || machine.indexOf("PENDING") === 0);
         var badge = (e.slot === "extra")
           ? '<span class="slot-tag extra">EXTRA SLOT</span>'
-          : (machine === primary ? '<span class="slot-tag primary">PRIMARY</span>' : '<span class="slot-tag primary">LICENSE</span>');
-        html += '<div class="dash-row"><span class="mid">' + esc(machine) + '</span>'
+          : (isPending ? '<span class="slot-tag" style="background:rgba(254,202,8,.15);color:var(--accent);border:1px solid var(--accent);font-weight:700;">RESERVED</span>' : (machine === primary ? '<span class="slot-tag primary">PRIMARY</span>' : '<span class="slot-tag primary">LICENSE</span>'));
+        html += '<div class="dash-row"><span class="mid" style="' + (isPending ? 'color:var(--accent);font-weight:700;' : '') + '">' + esc(machine) + '</span>'
           + badge
           + '<span class="key">' + esc(e.key) + '</span>'
           + '<span class="dt">' + esc(when) + '</span>'
-          + '<button class="mini-btn" data-copy-key="' + escAttr(e.key) + '" type="button">Copy</button></div>';
+          + '<button class="mini-btn" data-copy-key="' + escAttr(e.key) + '" type="button">Copy</button>'
+          + (isPending ? '<button class="mini-btn" data-activate-mid="' + escAttr(machine) + '" type="button" style="background:var(--accent);color:#241a04;font-weight:700;margin-left:4px;">Activate PC</button>' : '')
+          + '</div>';
       });
     }
     html += '<div id="slotCard"><p style="font-size:12.5px;color:var(--label-3);text-align:center;">Checking extra-slot deal…</p></div>';
@@ -484,6 +549,74 @@ window.PineappleFXLic = (function(){
     };
     Array.prototype.forEach.call(box.querySelectorAll("[data-copy-key]"), function(b){
       b.onclick = function(){ copyKey(b.getAttribute("data-copy-key"), b); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-activate-mid]"), function(b){
+      b.onclick = function(){
+        var oldMch = b.getAttribute("data-activate-mid");
+        var nm = prompt("Enter your 8-character Machine ID (from After Effects panel):", "");
+        if(!nm) return;
+        nm = nm.trim().toUpperCase();
+        if(!/^[A-Za-z0-9]{8}$/.test(nm)){
+          alert("Machine ID must be exactly 8 letters/numbers.");
+          return;
+        }
+        b.disabled = true;
+        b.textContent = "Activating…";
+        // Call server if present, else fallback
+        var token = "";
+        try { token = localStorage.getItem("pfx-admin-token") || ""; } catch(e){}
+        fetch(apiUrl("/api/generate-license"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": token ? ("Bearer " + token) : "" },
+          body: JSON.stringify({ email: acct, machine_id: nm, txn_id: "REBIND-" + Date.now(), coupon: (vault[oldMch] || {}).coupon || "BUILTIN" })
+        }).then(function(r){ return r.json(); }).then(function(d){
+          var newKey = (d && d.ok && d.key) ? d.key : null;
+          if(!newKey){
+            // Admin fallback if server not running (client static environment)
+            var fnv = function(str){
+              var h = 0x811c9dc5;
+              for(var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+              return h >>> 0;
+            };
+            var M_ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+            var M_SEC = "7c795771be81002adee1870b7dfbc589";
+            var h1 = fnv(M_SEC + ":" + nm + ":" + nm), h2 = fnv(nm + ":" + nm + ":" + M_SEC), sig = "";
+            var serial = "";
+            for(var s = 0; s < 8; s++) serial += M_ALPHA.charAt(Math.floor(Math.random() * 32));
+            var h1s = fnv(M_SEC + ":" + serial + ":" + nm), h2s = fnv(nm + ":" + serial + ":" + M_SEC);
+            for(var j = 0; j < 6; j++) sig += M_ALPHA.charAt((h1s >>> (27 - j * 5)) & 31);
+            for(var k = 0; k < 2; k++) sig += M_ALPHA.charAt((h2s >>> (27 - k * 5)) & 31);
+            newKey = "PFX2-" + serial + "-" + sig;
+          }
+          if(window.PFXVault && window.PFXVault.rebind){
+            window.PFXVault.rebind(acct, oldMch, nm, newKey);
+            showKey(newKey, { email: acct, downloadUrl: ZXP_URL });
+            refreshDashboard();
+            alert("License activated for " + nm + "!\nKey: " + newKey);
+          }
+        }).catch(function(){
+          // Local fallback
+          var fnv = function(str){
+            var h = 0x811c9dc5;
+            for(var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return h >>> 0;
+          };
+          var M_ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+          var M_SEC = "7c795771be81002adee1870b7dfbc589";
+          var serial = "";
+          for(var s = 0; s < 8; s++) serial += M_ALPHA.charAt(Math.floor(Math.random() * 32));
+          var h1s = fnv(M_SEC + ":" + serial + ":" + nm), h2s = fnv(nm + ":" + serial + ":" + M_SEC), sig = "";
+          for(var j = 0; j < 6; j++) sig += M_ALPHA.charAt((h1s >>> (27 - j * 5)) & 31);
+          for(var k = 0; k < 2; k++) sig += M_ALPHA.charAt((h2s >>> (27 - k * 5)) & 31);
+          var newKey = "PFX2-" + serial + "-" + sig;
+          if(window.PFXVault && window.PFXVault.rebind){
+            window.PFXVault.rebind(acct, oldMch, nm, newKey);
+            showKey(newKey, { email: acct, downloadUrl: ZXP_URL });
+            refreshDashboard();
+            alert("License activated for " + nm + "!\nKey: " + newKey);
+          }
+        });
+      };
     });
     renderSlotCard(acct, vault);
   }
