@@ -1105,10 +1105,11 @@
           + '<span style="color:var(--label-3);font-size:11px;">' + escHtml(s.email || "no email") + ' · ' + new Date(s.at||0).toLocaleString() + '</span><br>'
           + '<span style="color:var(--label-2);font-size:12px;">' + escHtml(s.type) + ': ' + escHtml(s.message || "") + '</span>'
           + '</div>'
-          + '<div style="display:flex;gap:6px;">'
+          + '<div style="display:flex;gap:6px;align-items:center;">'
           + (s.status !== "done" ? '<button class="mini-btn" data-aff-done="' + escHtml(s.id) + '" type="button">Mark Done</button>' : '')
           + (s.status !== "rejected" ? '<button class="danger-btn del-cpn-btn" data-aff-rej="' + escHtml(s.id) + '" type="button">Reject</button>' : '')
           + '<button class="mini-btn" data-aff-beta="' + escHtml(s.id) + '" type="button">' + (s.beta ? 'Revoke Beta' : 'Grant Beta') + '</button>'
+          + '<button class="danger-btn del-cpn-btn" data-aff-del="' + escHtml(s.id) + '" type="button" title="Delete Suggestion">🗑 Delete</button>'
           + '</div></div>';
       });
     }
@@ -1121,6 +1122,24 @@
     });
     Array.prototype.forEach.call(box.querySelectorAll("[data-aff-beta]"), function(b){
       b.onclick = function(){ toggleAffBeta(b.getAttribute("data-aff-beta"), !JSON.parse(b.getAttribute("data-aff-beta") === "true" || b.getAttribute("data-aff-beta"))); };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-aff-del]"), function(b){
+      b.onclick = function(){
+        var id = b.getAttribute("data-aff-del");
+        openConfirmModal({
+          title: "Delete Suggestion",
+          message: "Are you sure you want to delete this suggestion entry?",
+          confirmText: "Delete",
+          isDanger: true
+        }).then(function(confirmed){
+          if(!confirmed) return;
+          var all = lsGet("pfx-aff-suggestions", {});
+          delete all[id];
+          lsSet("pfx-aff-suggestions", all);
+          showToast("Suggestion deleted");
+          renderAffSuggestions();
+        });
+      };
     });
   }
   function setAffStatus(id, status){
