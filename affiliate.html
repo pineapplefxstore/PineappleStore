@@ -89,7 +89,7 @@
       </div>
     </div>
 
-    <!-- Beta Build Access -->
+    <!-- Beta Build Access & Timeline -->
     <div style="margin:16px 0;padding:14px;background:var(--grouped);border-radius:10px;border:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:20px;">🧪</span>
@@ -98,8 +98,15 @@
           <p style="font-size:12px;color:var(--label-2);margin:2px 0 0;">Download early testing versions of PineappleFX before public release.</p>
         </div>
       </div>
-      <div id="portalBetaArea" style="margin-top:12px;">
-        <button class="btn btn-pay" id="portalDlBeta" type="button" style="padding:8px 16px;font-size:12.5px;">⬇ Download Latest Beta Build (.zxp)</button>
+      <div id="portalBetaArea" style="margin-top:12px;"></div>
+
+      <!-- Beta Timeline / Previous Builds -->
+      <div id="portalBetaTimeline" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <b style="font-size:12.5px;color:var(--label-1);">⏱ Beta Version History &amp; Timeline</b>
+          <span style="font-size:11px;color:var(--label-3);">Archive</span>
+        </div>
+        <div id="portalTimelineContainer"></div>
       </div>
     </div>
 
@@ -379,21 +386,58 @@
         };
       }
 
-      // Download beta build
-      var dlBeta = document.getElementById("portalDlBeta");
-      if(dlBeta){
-        dlBeta.onclick = function(){
-          var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
-          var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
-          if(betaZxp){
-            var a = document.createElement("a"); a.href = betaZxp; a.download = betaName;
-            document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
-          } else {
-            // Fallback to production zxp
-            var a2 = document.createElement("a"); a2.href = "./downloads/PineappleFX.zxp"; a2.download = "PineappleFX.zxp";
-            document.body.appendChild(a2); a2.click(); setTimeout(function(){ document.body.removeChild(a2); }, 200);
+      // Render Beta Build Access Area
+      var betaArea = document.getElementById("portalBetaArea");
+      var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
+      var betaVer = localStorage.getItem("pfx-beta-installer-version") || "";
+      var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
+
+      if(betaArea){
+        if(betaZxp){
+          betaArea.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+            + '<button class="btn btn-pay" id="portalDlBeta" type="button" style="padding:8px 16px;font-size:12.5px;">⬇ Download ' + (betaVer ? ('Beta ' + betaVer) : betaName) + '</button>'
+            + '<span style="font-size:12px;color:#22c55e;">● Active Build Available</span>'
+            + '</div>';
+          var dlBeta = document.getElementById("portalDlBeta");
+          if(dlBeta){
+            dlBeta.onclick = function(){
+              var a = document.createElement("a"); a.href = betaZxp; a.download = betaName;
+              document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); }, 200);
+            };
           }
-        };
+        } else {
+          betaArea.innerHTML = '<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:8px;">'
+            + '<p style="margin:0;font-size:12.5px;color:var(--label-2);line-height:1.5;">'
+            + '<b>No beta build is currently available.</b> Please wait for some time or submit a feature suggestion below — our team might include it in the next beta build!'
+            + '</p>'
+            + '</div>';
+        }
+      }
+
+      // Render Beta Timeline (blurred archive / history)
+      var timelineCont = document.getElementById("portalTimelineContainer");
+      if(timelineCont){
+        timelineCont.innerHTML = '<div style="position:relative;margin-top:6px;overflow:hidden;border-radius:8px;">'
+          + '<div style="filter:blur(4px);pointer-events:none;user-select:none;opacity:0.6;padding:8px 10px;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;">'
+          + '  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">'
+          + '    <div><b style="font-size:12px;color:#fff;">v2.1.0-beta.2</b> <span style="font-size:11px;color:var(--label-3);">· AE 2026 Core Engine Overhaul</span></div>'
+          + '    <span style="font-size:11px;color:var(--accent);">Pending Release</span>'
+          + '  </div>'
+          + '  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">'
+          + '    <div><b style="font-size:12px;color:#fff;">v2.0.5-beta.1</b> <span style="font-size:11px;color:var(--label-3);">· Real-time GPU Shader Accel</span></div>'
+          + '    <span style="font-size:11px;color:var(--label-3);">Archived</span>'
+          + '  </div>'
+          + '  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">'
+          + '    <div><b style="font-size:12px;color:#fff;">v2.0.0-rc.3</b> <span style="font-size:11px;color:var(--label-3);">· Dynamic Preset Interpolator</span></div>'
+          + '    <span style="font-size:11px;color:var(--label-3);">Archived</span>'
+          + '  </div>'
+          + '</div>'
+          + '<div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);border-radius:8px;padding:8px;text-align:center;">'
+          + '  <span style="font-size:15px;margin-bottom:2px;">🔒</span>'
+          + '  <span style="font-size:12px;font-weight:600;color:#fff;">Beta Timeline Locked</span>'
+          + '  <span style="font-size:11px;color:var(--label-2);max-width:320px;">Previous beta versions will unlock here once beta cycles begin.</span>'
+          + '</div>'
+          + '</div>';
       }
 
       // Submit suggestions

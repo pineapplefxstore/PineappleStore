@@ -548,13 +548,33 @@ window.PineappleFXLic = (function(){
     // Show Beta Download Card for Beta Testers & Owner
     if(isBetaTester){
       var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
-      var betaVer = localStorage.getItem("pfx-beta-installer-version") || "Beta Preview";
+      var betaVer = localStorage.getItem("pfx-beta-installer-version") || "";
       var betaName = localStorage.getItem("pfx-beta-installer-filename") || "PineappleFX-beta.zxp";
       html += '<div style="margin-bottom:14px;padding:12px;background:rgba(254,202,8,0.08);border:1px solid rgba(254,202,8,0.3);border-radius:10px;">'
-        + '<b style="color:var(--accent);font-size:13px;">🧪 Beta Access Active</b>'
-        + '<p style="font-size:12px;color:var(--label-2);margin:4px 0 8px;">You have early access to test PineappleFX beta builds (' + esc(betaVer) + '). Install this build in After Effects with your license key.</p>'
-        + (betaZxp ? '<button class="btn btn-pay" id="dashDlBeta" type="button" style="padding:7px 14px;font-size:12px;">⬇ Download ' + esc(betaName) + '</button>'
-                  : '<span style="font-size:11.5px;color:var(--label-3);">No custom beta .zxp uploaded yet — using default build.</span>')
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">'
+        + '  <b style="color:var(--accent);font-size:13px;">🧪 Beta Access Active</b>'
+        + (betaZxp ? '  <span style="font-size:11px;color:#22c55e;">● Active Beta Available</span>' : '  <span style="font-size:11px;color:var(--label-3);">● Waiting for Next Release</span>')
+        + '</div>'
+        + (betaZxp
+            ? ('<p style="font-size:12px;color:var(--label-2);margin:4px 0 8px;">You have early access to test PineappleFX beta builds' + (betaVer ? (' (<b>' + esc(betaVer) + '</b>)') : '') + '. Install this build in After Effects with your license key.</p>'
+               + '<button class="btn btn-pay" id="dashDlBeta" type="button" style="padding:7px 14px;font-size:12px;">⬇ Download ' + esc(betaName) + '</button>')
+            : ('<p style="font-size:12px;color:var(--label-2);margin:6px 0 8px;line-height:1.5;"><b>There is no beta available currently.</b> Please wait for some time or give a suggestion below — the creator might add it to the upcoming beta build!</p>'))
+        + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+        + '  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+        + '    <span style="font-size:11.5px;color:var(--label-2);font-weight:600;">⏱ Beta Version History &amp; Timeline</span>'
+        + '    <span style="font-size:10px;color:var(--label-3);">Archive</span>'
+        + '  </div>'
+        + '  <div style="position:relative;overflow:hidden;border-radius:6px;">'
+        + '    <div style="filter:blur(3.5px);opacity:0.55;user-select:none;pointer-events:none;padding:6px 8px;background:rgba(0,0,0,0.25);border-radius:6px;font-size:11px;">'
+        + '      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>v2.1.0-beta.2 (AE 2026 Core Engine)</span><span style="color:var(--accent);">Pending</span></div>'
+        + '      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>v2.0.5-beta.1 (GPU Shader Accel)</span><span style="color:var(--label-3);">Archived</span></div>'
+        + '      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>v2.0.0-rc.3 (Dynamic Presets)</span><span style="color:var(--label-3);">Archived</span></div>'
+        + '    </div>'
+        + '    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);border-radius:6px;">'
+        + '      <span style="font-size:11px;color:var(--label-2);">🔒 Archived builds unlock as beta releases roll out</span>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>'
         + '</div>';
     }
 
