@@ -6,64 +6,23 @@ Usage:
 Pipeline:
   1. Stages payload/ = the 7 sealed extension files + meta.json
      (FNV SECRET from tools/mint_key.py + verify URL + version).
-  2. Runs PyInstaller --onefile --noconsole with icon & version file.
-  3. Applies Windows icon resources and version stamps.
-  4. Copies dist/PineappleFX-Installer.exe to downloads/.
+  2. Runs PyInstaller with --icon and --version-file so PyInstaller's
+     embedded PKG archive layout and bootloader offsets remain 100% intact.
+  3. Copies dist/PineappleFX-Installer.exe to downloads/.
 """
 import json
 import os
 import pathlib
 import re
 import shutil
-import struct
 import subprocess
 import sys
-import win32api
 
 BASE = pathlib.Path(__file__).resolve().parent.parent
 STAGE = BASE / 'build' / 'exe-payload'
 WANT = ['CSXS/manifest.xml', 'dist/index.html', 'dist/logo.png',
         'extendscript/host.jsx', 'extendscript/presets/Chrome.ffx',
         'index.html', 'Public/logo.png']
-
-
-def stamp_exe(exe_path, ico_path, version_txt):
-    """Embeds multi-resolution icons and Windows version info metadata."""
-    # 1. Update icon resources
-    if ico_path and os.path.exists(ico_path):
-        with open(ico_path, 'rb') as f:
-            data = f.read()
-        reserved, type_, count = struct.unpack('<HHH', data[:6])
-        entries = []
-        for i in range(count):
-            offset = 6 + i * 16
-            w, h, c, r, planes, bpp, bytes_in_res, data_offset = struct.unpack('<BBBBHHII', data[offset:offset+16])
-            img_bytes = data[data_offset:data_offset+bytes_in_res]
-            entries.append({
-                'w': w, 'h': h, 'c': c, 'r': r, 'planes': planes, 'bpp': bpp,
-                'bytes_in_res': bytes_in_res, 'data': img_bytes
-            })
-        
-        h_update = win32api.BeginUpdateResource(str(exe_path), 0)
-        for i, e in enumerate(entries, start=1):
-            win32api.UpdateResource(h_update, 3, i, e['data'])
-            
-        grp_header = struct.pack('<HHH', 0, 1, count)
-        grp_entries = bytearray()
-        for i, e in enumerate(entries, start=1):
-            grp_entries += struct.pack('<BBBBHHIH',
-                e['w'], e['h'], e['c'], e['r'], e['planes'], e['bpp'], e['bytes_in_res'], i
-            )
-        win32api.UpdateResource(h_update, 14, 1, grp_header + bytes(grp_entries))
-        win32api.EndUpdateResource(h_update, 0)
-        print('Embedded icon resources into %s' % exe_path)
-
-    # 2. Update version info metadata (Publisher, ProductName, etc.)
-    if version_txt and os.path.exists(version_txt):
-        import PyInstaller.utils.win32.versioninfo as vinfo
-        v = vinfo.load_version_info_from_text_file(str(version_txt))
-        vinfo.write_version_info_to_executable(str(exe_path), v)
-        print('Stamped version metadata into %s' % exe_path)
 
 
 def main():
@@ -132,9 +91,6 @@ def main():
     if not exe.is_file():
         print('refusing: exe not produced')
         sys.exit(1)
-
-    # Re-apply explicit resource stamp
-    stamp_exe(exe, ico, ver_file)
 
     dest = BASE / 'downloads' / 'PineappleFX-Installer.exe'
     dest.parent.mkdir(parents=True, exist_ok=True)
