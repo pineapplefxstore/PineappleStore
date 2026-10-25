@@ -483,6 +483,34 @@
       v[email][newMachine] = entry;
       lsSet("pfx-licenses", v);
       return entry;
+    },
+    /* Sync verified machine ID directly from redeemed key */
+    bindKeyToMachine: function(key, machineId){
+      var normK = String(key || "").trim().toUpperCase();
+      var normM = String(machineId || "").trim().toUpperCase();
+      if(!normK || !normM) return null;
+      var v = window.PFXVault.all();
+      var foundEmail = null, foundSlot = null, foundEntry = null;
+      for(var em in v){
+        for(var mch in v[em]){
+          if(v[em][mch] && String(v[em][mch].key || "").toUpperCase() === normK){
+            foundEmail = em; foundSlot = mch; foundEntry = v[em][mch];
+            break;
+          }
+        }
+        if(foundEmail) break;
+      }
+      if(foundEmail && foundSlot && foundSlot !== normM){
+        delete v[foundEmail][foundSlot];
+        foundEntry.machine = normM;
+        foundEntry.activatedAt = Date.now();
+        foundEntry.autoDetected = true;
+        delete foundEntry.placeholder;
+        v[foundEmail][normM] = foundEntry;
+        lsSet("pfx-licenses", v);
+        return { email: foundEmail, machine: normM, entry: foundEntry };
+      }
+      return null;
     }
   };
   window.PFXPricing = { basePrice: basePrice, halfPrice: halfPrice, launchActive: launchActive };

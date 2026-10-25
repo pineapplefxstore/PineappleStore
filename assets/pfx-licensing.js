@@ -125,103 +125,79 @@ window.PineappleFXLic = (function(){
     });
   }
 
-  /* --- post-PayPal: orderID + payer email auto-captured, only Machine ID asked --- */
+  /* --- post-PayPal: orderID + payer email auto-captured, direct download + instant license issued --- */
   function handleApproval(info){
     var c = coupon();
-    modalBody.innerHTML = '<div style="font-size:34px;">✅</div><h3>Payment approved!</h3>'
-      + '<p class="lic-sub">One last step — paste your <b>Machine ID</b> (8 characters, shown on the locked panel) to mint your key:</p>'
-      + '<input id="licDev" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder="ABCDEFGH" maxlength="8" '
-      + 'style="display:block;width:100%;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:12px;font-size:15px;font-family:monospace;text-transform:uppercase;letter-spacing:1.5px;text-align:center;outline:none;" />'
-      + '<p class="lic-sub" id="licDevErr" style="color:#ff8f88;min-height:18px;"></p>'
-      + '<button class="btn btn-pay" id="licMintBtn" type="button">Generate my key</button>'
-      + '<button class="btn btn-ghost" id="licNoMidBtn" type="button" style="width:100%;margin-top:8px;font-size:13px;border-color:var(--hairline);color:var(--label-2);">Continue without Machine ID →</button>'
-      + '<div id="licMintSpin" style="display:none;"><div class="lic-spin"></div><p class="lic-sub">Minting your PFX2 key…</p></div>';
+    var acct = (window.PFXAuth && window.PFXAuth.session()) || info.email || "";
+    var pk = placeholderKey(info.orderID || acct);
+
+    // Save instant license to account immediately
+    if(acct && window.PFXVault){
+      window.PFXVault.save(acct, "PENDING", { key: pk, at: Date.now(), orderID: info.orderID, coupon: c, placeholder: true });
+    }
+    if(window.PFXCoupons && c) window.PFXCoupons.use(c);
+
+    // Render completion card with one-click download and instructions
+    modalBody.innerHTML = '<div style="font-size:36px;">🎉</div>'
+      + '<h3 style="margin-top:6px;">Payment Verified!</h3>'
+      + '<p class="lic-sub">Your PineappleFX license has been generated and activated for your account. You can download the <b>.zxp installer</b> right now:</p>'
+      + '<div class="keyline-big" id="licKeyVal" style="font-size:16px;letter-spacing:1px;color:var(--accent);">' + esc(pk) + '</div>'
+      + '<div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">'
+      + '  <button class="btn btn-pay" id="licCopyBtn" type="button" style="flex:1;">Copy License Key</button>'
+      + '  <a class="lic-dl" id="licDlInstant" href="' + esc(ZXP_URL) + '" style="flex:1.2;text-align:center;margin:0;padding:12px;font-size:13px;font-weight:700;">⬇ Download PineappleFX .zxp</a>'
+      + '</div>'
+      + '<div class="lic-steps-mini" style="margin-top:12px;text-align:left;line-height:1.7;">'
+      + '  <b>Automatic Machine Verification:</b><br>'
+      + '  1. Install <b>PineappleFX.zxp</b> and restart After Effects.<br>'
+      + '  2. Open Window → Extensions → PineappleFX and paste your license key.<br>'
+      + '  3. The plugin will <b>automatically detect your machine ID</b>, verify your license, and sync it to your website account and admin panel.'
+      + '</div>'
+      + '<div style="margin-top:14px;border-top:1px solid var(--hairline);padding-top:10px;text-align:center;">'
+      + '  <span style="font-size:12px;color:var(--label-3);">Have your Machine ID already?</span> '
+      + '  <a href="#" id="licToggleManualMid" style="font-size:12px;color:var(--accent);font-weight:600;">Enter manually</a>'
+      + '</div>'
+      + '<div id="licManualMidBox" style="display:none;margin-top:10px;">'
+      + '  <input id="licDev" class="mono" type="text" autocomplete="off" spellcheck="false" placeholder="8-CHAR MACHINE ID" maxlength="8" '
+      + '  style="display:block;width:100%;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;color:var(--label);padding:10px;font-size:14px;font-family:monospace;text-transform:uppercase;letter-spacing:1.5px;text-align:center;outline:none;" />'
+      + '  <button class="mini-btn" id="licManualMintBtn" type="button" style="width:100%;margin-top:6px;">Bind Machine ID</button>'
+      + '  <p class="lic-sub" id="licDevErr" style="color:#ff8f88;min-height:16px;margin-top:4px;font-size:12px;"></p>'
+      + '</div>';
+    
     openModal();
-    var devEl = document.getElementById("licDev");
-    var mintBtn = document.getElementById("licMintBtn");
-    var noMidBtn = document.getElementById("licNoMidBtn");
-    if(noMidBtn){
-      noMidBtn.onclick = function(){
-        var acct = (window.PFXAuth && window.PFXAuth.session()) || "";
-        if(!acct){
-          document.getElementById("licDevErr").innerHTML = "Log in first so your license is saved to your account. "
-            + '<a href="#" id="licLoginLink2" style="color:var(--accent);font-weight:700;">Log in / sign up</a>';
-          document.getElementById("licLoginLink2").onclick = function(e){
-            if(e && e.preventDefault) e.preventDefault();
-            if(window.PFXOpenAuth) window.PFXOpenAuth("signup");
-          };
-          return;
-        }
-        var pk = placeholderKey(info.orderID || acct);
-        if(window.PFXVault) window.PFXVault.save(acct, "PENDING", { key: pk, at: Date.now(), orderID: info.orderID, coupon: c, placeholder: true });
-        if(window.PFXCoupons && c) window.PFXCoupons.use(c);
-        showKey(pk, { email: acct || info.email, downloadUrl: ZXP_URL, machine: "PENDING", isPlaceholder: true });
-        refreshDashboard();
+    refreshDashboard();
+
+    var copyBtn = document.getElementById("licCopyBtn");
+    if(copyBtn) copyBtn.onclick = function(){ copyKey(pk, this); };
+
+    var toggleManual = document.getElementById("licToggleManualMid");
+    var manualBox = document.getElementById("licManualMidBox");
+    if(toggleManual && manualBox){
+      toggleManual.onclick = function(e){
+        if(e && e.preventDefault) e.preventDefault();
+        manualBox.style.display = manualBox.style.display === "none" ? "block" : "none";
       };
     }
-    devEl.focus();
-    devEl.addEventListener("input", function(){
-      var p = devEl.selectionStart;
-      devEl.value = devEl.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
-      try { devEl.setSelectionRange(p, p); } catch(e){}
-    });
-    function doMint(){
-      var dev = devEl.value.trim().toUpperCase();
-      if(!/^[A-Za-z0-9]{8}$/.test(dev)){
-        document.getElementById("licDevErr").textContent = "Machine ID must be exactly 8 letters/numbers.";
-        return;
-      }
-      var acct = (window.PFXAuth && window.PFXAuth.session()) || "";
-      if(!acct){
-        document.getElementById("licDevErr").innerHTML = "Log in first so your key is saved to your account. "
-          + '<a href="#" id="licLoginLink" style="color:var(--accent);font-weight:700;">Log in / sign up</a>';
-        document.getElementById("licLoginLink").onclick = function(e){
-          if(e && e.preventDefault) e.preventDefault();
-          if(window.PFXOpenAuth) window.PFXOpenAuth("signup");
-        };
-        return;
-      }
-      var email = acct || info.email;
-      // 1 active license per machine: recover instead of duplicating.
-      var prior = (window.PFXVault && window.PFXVault.existing(acct, dev)) || null;
-      if(prior){
-        showKey(prior.key, { email: email, downloadUrl: ZXP_URL, recovered: true });
-        return;
-      }
-      // Strict 1-machine-per-license: a paid key for a second distinct
-      // machine needs the one-time $7.90 extra slot (server enforces too).
-      // Owners skip this — every owner key is free.
-      var ownerNow = false;
-      try { ownerNow = window.PFXCore && window.PFXCore.isOwner(); } catch(e){}
-      if(!ownerNow && !slotAllows(acct, dev)){
-        document.getElementById("licDevErr").innerHTML = "This account's machine slot"
-          + (slotHasExtra(acct) ? "s are" : " is")
-          + " already filled — each key unlocks exactly 1 PC. "
-          + '<a href="dashboard" style="color:var(--accent);font-weight:700;">Get the one-time $7.90 extra-machine deal</a> in your dashboard.';
-        return;
-      }
-      mintBtn.style.display = "none";
-      document.getElementById("licMintSpin").style.display = "block";
-      mint(
-        { orderID: info.orderID, email: email, machine_id: dev, amount: info.amount, coupon: c },
-        {
-          setLoading: function(){},
-          onKey: function(key, data){
-            if(window.PFXVault) window.PFXVault.save(acct, dev, { key: key, at: Date.now(), orderID: info.orderID, coupon: c });
-            if(window.PFXCoupons && c) window.PFXCoupons.use(c);
-            showKey(key, { email: email, downloadUrl: data.downloadUrl, simulated: data.simulated });
-            refreshDashboard();
-          },
-          onError: function(html){
-            mintBtn.style.display = "";
-            document.getElementById("licMintSpin").style.display = "none";
-            document.getElementById("licDevErr").innerHTML = html;
-          }
+
+    var manualMintBtn = document.getElementById("licManualMintBtn");
+    var devEl = document.getElementById("licDev");
+    if(manualMintBtn && devEl){
+      devEl.addEventListener("input", function(){
+        devEl.value = devEl.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+      });
+      manualMintBtn.onclick = function(){
+        var dev = devEl.value.trim().toUpperCase();
+        if(!/^[A-Za-z0-9]{8}$/.test(dev)){
+          document.getElementById("licDevErr").textContent = "Machine ID must be exactly 8 letters/numbers.";
+          return;
         }
-      );
+        if(window.PFXVault && window.PFXVault.rebind){
+          window.PFXVault.rebind(acct, "PENDING", dev, pk);
+          refreshDashboard();
+          document.getElementById("licDevErr").style.color = "#22c55e";
+          document.getElementById("licDevErr").textContent = "✓ Bound to machine " + dev;
+        }
+      };
     }
-    mintBtn.onclick = doMint;
-    devEl.onkeydown = function(e){ if(e.key === "Enter") doMint(); };
   }
 
   /* --- owner / promo coupon: single Machine ID field, instant key --- */

@@ -48,7 +48,13 @@ export default async function handler(req, res) {
       db.audit(record.email || "?", "verify-revoked", machine);
       return json(res, 403, { ok: false, error: "revoked" });
     }
-    if (record.machine && record.machine !== machine) {
+    // Auto-detect and sync machine if license was pending or unassigned
+    if (!record.machine || record.machine === "PENDING" || record.machine === "?") {
+      record.machine = machine;
+      record.autoBoundAt = new Date().toISOString();
+      db.set("licenses", key, record);
+      db.audit(record.email || "?", "verify-autobound", machine);
+    } else if (record.machine !== machine) {
       db.audit(record.email || "?", "verify-wrong-machine", machine);
       return json(res, 403, { ok: false, error: "wrong-machine" });
     }
