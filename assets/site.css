@@ -334,7 +334,7 @@ footer img{width:22px;height:22px;vertical-align:-6px;margin-right:6px}
 .hero-apple{text-align:center;padding:120px 22px 70px;background:radial-gradient(60% 50% at 50% -20%,color-mix(in srgb,var(--brand) 20%,transparent),transparent 70%);position:relative;overflow:hidden}
 .hero-apple::before{content:"";position:absolute;inset:-20%;background:radial-gradient(60% 60% at 50% 30%,color-mix(in srgb,var(--brand) 25%,transparent),transparent);filter:blur(60px);opacity:.5;pointer-events:none;z-index:0}
 .hero-wrap{position:relative;z-index:2}
-.hero-pine{width:180px;height:180px;border-radius:34px;filter:drop-shadow(0 24px 48px color-mix(in srgb,var(--brand) 40%,transparent));animation:pineFloat 7s ease-in-out infinite;margin-bottom:34px;display:block;margin-left:auto;margin-right:auto}
+.hero-pine{width:220px;height:220px;border-radius:36px;filter:drop-shadow(0 24px 48px color-mix(in srgb,var(--brand) 40%,transparent));animation:pineFloat 7s ease-in-out infinite;margin-bottom:34px;display:block;margin-left:auto;margin-right:auto}
 .hero-kicker{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--brand);margin-bottom:16px;opacity:.9}
 .hero-apple h1{font-size:clamp(52px,11vw,112px);font-weight:800;letter-spacing:-.035em;line-height:1.0;margin:4px 0 12px;color:var(--label);animation:fadeUp .8s ease both}
 .hero-apple h1 span{color:var(--brand);background:linear-gradient(135deg,var(--brand),var(--brand-hi));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
