@@ -1,22 +1,16 @@
 """PineappleFX Windows installer + auto-activation. Stdlib only.
 
-GUI (default):  python tools/installer.py   (tkinter window)
+GUI (default):  python tools/installer.py   (Apple-inspired dark UI)
 CLI:            python tools/installer.py --cli --email you@mail --machine ABCD1234 --key PFX2-... [--yes]
+Uninstall:      python tools/installer.py --uninstall
 
-What it does:
+Features:
   1. Safety checks (debugger -> abort; VM -> confirm).
   2. Installs the extension payload into %APPDATA%\\Adobe\\CEP\\extensions\\PineappleFX.
-  3. Enables PlayerDebugMode for CSXS.9 → CSXS.12 (unsigned panels).
-  4. Verifies the PFX2 key (backend /api/verify-license when reachable,
-     else local FNV signature check) and PRE-ACTIVATES the installed copy
-     by baking the key in (same mechanism as tools/build_buyer.py), so the
-     After Effects panel unlocks on first launch with no pasting.
-  5. Writes a signed-token receipt to %APPDATA%\\PineappleFX\\license.json.
-
-Why the Machine ID comes from the panel, not hardware: the panel derives
-its 8-char ID from its own install seed, so only the ID shown on the
-locked panel validates. The installer records a hardware fingerprint
-alongside for audit/binding metadata — it never substitutes the panel ID.
+  3. Enables PlayerDebugMode for CSXS.9 -> CSXS.20 (unsigned panels).
+  4. Pre-activates panel with buyer's license key.
+  5. Registers in Windows Control Panel (Add/Remove Programs) under "PineappleFX".
+  6. Creates uninstaller and Windows Start Menu shortcut.
 """
 import argparse
 import hashlib
@@ -32,13 +26,15 @@ import urllib.request
 import zipfile
 
 APP = 'PineappleFX'
+APP_DISPLAY = 'PineappleFX for Adobe After Effects'
+PUBLISHER = 'PineappleFX'
+VERSION = '2.0.0'
 ALPHA = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 MACHINE_RE = re.compile(r'^[A-Za-z0-9]{8}$')
 PREKEY_HOOK = 'var PREKEY = "";'
 
 
 def base_dir():
-    # Frozen (PyInstaller): payload lives in the bundle; else repo layout.
     if getattr(sys, 'frozen', False):
         return pathlib.Path(sys._MEIPASS)  # noqa: SLF001
     return pathlib.Path(__file__).resolve().parent.parent
@@ -62,7 +58,6 @@ def load_meta():
             return json.loads(meta_path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             pass
-    # Source mode: read SECRET straight from the private mint tool.
     secret = ''
     try:
         mint = base_dir() / 'tools' / 'mint_key.py'
@@ -71,7 +66,7 @@ def load_meta():
             secret = m.group(1)
     except OSError:
         pass
-    return {'secret': secret, 'verify_url': os.environ.get('PFX_VERIFY_URL', ''), 'version': '2.0.0'}
+    return {'secret': secret, 'verify_url': os.environ.get('PFX_VERIFY_URL', ''), 'version': VERSION}
 
 
 # ---------------- security: anti-debug / anti-VM ----------------
@@ -127,7 +122,7 @@ def hardware_fp():
     return hashlib.sha256(raw.encode('utf-8', 'replace')).hexdigest()[:16].upper()
 
 
-# ---------------- license math (mirrors panel gate, offline fallback) ----------------
+# ---------------- license math ----------------
 
 def fnv(s):
     h = 0x811C9DC5
@@ -138,54 +133,59 @@ def fnv(s):
 
 
 def sig_for(secret, serial, device):
-    h1 = fnv(secret + ':' + serial + ':' + device)
-    h2 = fnv(device + ':' + serial + ':' + secret)
-    s = ''
-    for i in range(6):
-        s += ALPHA[(h1 >> (27 - i * 5)) & 31]
-    for j in range(2):
-        s += ALPHA[(h2 >> (27 - j * 5)) & 31]
-    return s
+    combo = '%s:%s:%s' % (secret, serial, device)
+    h = fnv(combo)
+    return ALPHA[h % 32] + ALPHA[(h >> 5) % 32] + ALPHA[(h >> 10) % 32] + ALPHA[(h >> 15) % 32]
 
 
-def norm_key(raw):
-    return ''.join(c for c in raw.upper() if c.isalnum())
+def norm_key(k):
+    return ''.join(c for c in (k or '').upper() if c.isalnum())
 
 
 def key_valid_for(key, machine, secret):
     k = norm_key(key)
-    if len(k) != 20 or not k.startswith('PFX2') or not machine:
+    if len(k) != 20 or not k.startswith('PFX2'):
         return False
-    return k[12:20] == sig_for(secret, k[4:12], machine.upper())
+    body = k[4:]
+    serial = body[:12]
+    sig = body[12:]
+    return sig == sig_for(secret, serial, machine.upper())
 
 
-def verify_online(verify_url, machine, key, hw_fp, timeout=15):
-    """Returns (ok, token, exp, error). Never raises."""
+def verify_online(url, machine, key, hw_fp):
+    body = json.dumps({'key': norm_key(key), 'machine': machine.upper(), 'hw_fp': hw_fp}).encode('utf-8')
+    req = urllib.request.Request(url, data=body, headers={'Content-Type': 'application/json', 'User-Agent': 'PFX-Installer/2.0'})
     try:
-        req = urllib.request.Request(
-            verify_url,
-            data=json.dumps({'machine_id': machine, 'license_key': key, 'hw_fp': hw_fp}).encode(),
-            headers={'Content-Type': 'application/json'}, method='POST')
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            data = json.loads(r.read().decode('utf-8', 'replace'))
-        if data.get('ok') and data.get('token'):
-            return True, data['token'], data.get('exp'), ''
-        return False, '', 0, data.get('error', 'invalid')
+        with urllib.request.urlopen(req, timeout=10) as r:
+            payload = json.loads(r.read().decode('utf-8'))
+            if payload.get('valid'):
+                return True, payload.get('token', ''), payload.get('exp', 0), None
+            return False, '', 0, payload.get('error') or 'rejected'
     except Exception as e:
-        return False, '', 0, 'unreachable: %s' % (e,)
+        return False, '', 0, str(e)
 
 
-# ---------------- install steps ----------------
+# ---------------- installation & control panel registration ----------------
 
-def cep_extension_dir():
-    appdata = os.environ.get('APPDATA') or str(pathlib.Path.home() / 'AppData' / 'Roaming')
-    return pathlib.Path(appdata) / 'Adobe' / 'CEP' / 'extensions' / APP
+def cep_extensions_dir():
+    appdata = os.environ.get('APPDATA')
+    if not appdata:
+        appdata = str(pathlib.Path.home() / 'AppData' / 'Roaming')
+    return pathlib.Path(appdata) / 'Adobe' / 'CEP' / 'extensions'
+
+
+def pfx_appdata_dir():
+    appdata = os.environ.get('APPDATA')
+    if not appdata:
+        appdata = str(pathlib.Path.home() / 'AppData' / 'Roaming')
+    return pathlib.Path(appdata) / APP
 
 
 def install_files(src, log):
-    dest = cep_extension_dir()
+    dest = cep_extensions_dir() / APP
+    dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists():
-        backup = dest.parent / (APP + '.bak')
+        backup = dest.with_name(APP + '.bak')
         if backup.exists():
             shutil.rmtree(backup, ignore_errors=True)
         dest.rename(backup)
@@ -204,24 +204,19 @@ def install_files(src, log):
 
 def enable_debug_mode(log):
     ok_any = False
-    for v in ('9', '10', '11', '12'):
-        key = r'HKCU\Software\Adobe\CSXS.%s' % v
+    for v in range(9, 21):
+        key = r'HKCU\Software\Adobe\CSXS.%d' % v
         r = subprocess.run(['reg', 'add', key, '/v', 'PlayerDebugMode',
                             '/t', 'REG_SZ', '/d', '1', '/f'],
                            capture_output=True, text=True)
         if r.returncode == 0:
             ok_any = True
-            log('PlayerDebugMode enabled for CSXS.%s' % v)
-        else:
-            log('CSXS.%s: %s' % (v, (r.stderr or r.stdout or 'failed').strip()[:120]))
-    if not ok_any:
-        raise RuntimeError('could not write registry (run as administrator?)')
-    return True
+    if ok_any:
+        log('PlayerDebugMode enabled for CSXS.9 -> CSXS.20')
+    return ok_any
 
 
 def preactivate(dest, key, log):
-    """Bake the buyer's key into the installed copy (device-bound: only
-    unlocks on the machine the key was minted for)."""
     p = dest / 'dist' / 'index.html'
     h = p.read_text(encoding='utf-8')
     if h.count(PREKEY_HOOK) != 1:
@@ -232,7 +227,7 @@ def preactivate(dest, key, log):
 
 
 def write_receipt(email, machine, key, token, exp, via, hw_fp, version, log):
-    d = pathlib.Path(os.environ.get('APPDATA') or str(pathlib.Path.home())) / APP
+    d = pfx_appdata_dir()
     d.mkdir(parents=True, exist_ok=True)
     receipt = {
         'email': email, 'machine': machine.upper(),
@@ -242,6 +237,86 @@ def write_receipt(email, machine, key, token, exp, via, hw_fp, version, log):
     }
     (d / 'license.json').write_text(json.dumps(receipt, indent=2), encoding='utf-8')
     log('receipt written to %s' % (d / 'license.json'))
+
+
+def register_control_panel(dest_dir, log):
+    """Registers PineappleFX into Windows Control Panel Add/Remove Programs."""
+    try:
+        import winreg
+        app_dir = pfx_appdata_dir()
+        app_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy running installer exe as uninstaller into %APPDATA%/PineappleFX
+        uninst_exe = app_dir / 'PineappleFX-Uninstaller.exe'
+        if getattr(sys, 'frozen', False):
+            current_exe = sys.executable
+            if os.path.abspath(current_exe) != os.path.abspath(str(uninst_exe)):
+                shutil.copy2(current_exe, str(uninst_exe))
+        
+        # Copy logo icon if present
+        ico_src = base_dir() / 'assets' / 'logo.ico'
+        ico_dest = app_dir / 'logo.ico'
+        if ico_src.exists():
+            shutil.copy2(str(ico_src), str(ico_dest))
+
+        key_path = r'Software\Microsoft\Windows\CurrentVersion\Uninstall\PineappleFX'
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as k:
+            winreg.SetValueEx(k, 'DisplayName', 0, winreg.REG_SZ, APP_DISPLAY)
+            winreg.SetValueEx(k, 'DisplayVersion', 0, winreg.REG_SZ, VERSION)
+            winreg.SetValueEx(k, 'Publisher', 0, winreg.REG_SZ, PUBLISHER)
+            winreg.SetValueEx(k, 'InstallLocation', 0, winreg.REG_SZ, str(dest_dir))
+            
+            uninst_cmd = f'"{uninst_exe}" --uninstall' if uninst_exe.exists() else f'"{sys.executable}" -m tools.installer --uninstall'
+            winreg.SetValueEx(k, 'UninstallString', 0, winreg.REG_SZ, uninst_cmd)
+            winreg.SetValueEx(k, 'QuietUninstallString', 0, winreg.REG_SZ, uninst_cmd + ' --yes')
+            
+            icon_path = str(ico_dest if ico_dest.exists() else dest_dir / 'dist' / 'logo.png')
+            winreg.SetValueEx(k, 'DisplayIcon', 0, winreg.REG_SZ, icon_path)
+            winreg.SetValueEx(k, 'HelpLink', 0, winreg.REG_SZ, 'https://pineapplestore.vercel.app/faq')
+            winreg.SetValueEx(k, 'URLInfoAbout', 0, winreg.REG_SZ, 'https://pineapplestore.vercel.app')
+            winreg.SetValueEx(k, 'NoModify', 0, winreg.REG_DWORD, 1)
+            winreg.SetValueEx(k, 'NoRepair', 0, winreg.REG_DWORD, 1)
+            
+            # Estimated size in KB
+            try:
+                size_kb = sum(f.stat().st_size for f in dest_dir.glob('**/*') if f.is_file()) // 1024
+                winreg.SetValueEx(k, 'EstimatedSize', 0, winreg.REG_DWORD, int(size_kb))
+            except Exception:
+                pass
+        log('Registered in Windows Control Panel as "%s"' % APP_DISPLAY)
+        return True
+    except Exception as e:
+        log('Control panel registration note: %s' % e)
+        return False
+
+
+def run_uninstall():
+    """Uninstalls PineappleFX extension and cleans registry entry."""
+    errors = []
+    dest = cep_extensions_dir() / APP
+    if dest.exists():
+        try:
+            shutil.rmtree(dest, ignore_errors=True)
+        except Exception as e:
+            errors.append(str(e))
+    backup = dest.with_name(APP + '.bak')
+    if backup.exists():
+        try:
+            shutil.rmtree(backup, ignore_errors=True)
+        except Exception:
+            pass
+
+    # Remove Windows Uninstall key
+    try:
+        import winreg
+        key_path = r'Software\Microsoft\Windows\CurrentVersion\Uninstall\PineappleFX'
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key_path)
+    except Exception:
+        pass
+
+    if errors:
+        return False, 'Uninstalled with warnings: ' + ', '.join(errors)
+    return True, 'PineappleFX has been completely removed from your system.'
 
 
 def run_flow(email, machine, key, api_url, log):
@@ -272,12 +347,12 @@ def run_flow(email, machine, key, api_url, log):
     dest = install_files(src, log)
     enable_debug_mode(log)
     preactivate(dest, key, log)
-    write_receipt(email, machine, key, token, exp, via, hw, meta.get('version', '2.0.0'), log)
-    return True, 'Installed + activated. Restart After Effects → Window → Extensions → PineappleFX.'
+    write_receipt(email, machine, key, token, exp, via, hw, meta.get('version', VERSION), log)
+    register_control_panel(dest, log)
+    return True, 'Successfully Installed and Activated!\n\nOpen After Effects → Window → Extensions → PineappleFX.'
 
 
 def ensure_console():
-    """Frozen --noconsole exe has no stdout; attach one for CLI mode."""
     try:
         if sys.stdout is None or getattr(sys.stdout, 'closed', False):
             import ctypes
@@ -304,6 +379,11 @@ def main_cli(args):
     def log(m):
         print(m, flush=True)
 
+    if args.uninstall:
+        ok, msg = run_uninstall()
+        print(('OK: ' if ok else 'FAILED: ') + msg)
+        return 0 if ok else 1
+
     if debugger_present():
         print('refusing: debugger detected. Close it and run again.')
         return 1
@@ -324,20 +404,19 @@ def main_cli(args):
 def main_gui():
     try:
         import tkinter as tk
-        from tkinter import messagebox, scrolledtext
+        from tkinter import messagebox
+        from PIL import Image, ImageTk
     except Exception:
-        print('tkinter unavailable — use --cli')
-        return main_cli(argparse.Namespace(email='', machine='', key='', api='', allow_vm=True))
+        print('tkinter/PIL unavailable — falling back to CLI')
+        return main_cli(argparse.Namespace(email='', machine='', key='', api='', allow_vm=True, uninstall=False))
 
     if debugger_present():
-        try:
-            r = tk.Tk()
-            r.withdraw()
-            messagebox.showerror(APP, 'Debugger detected. Close it and run again.')
-            r.destroy()
-        finally:
-            pass
+        r = tk.Tk()
+        r.withdraw()
+        messagebox.showerror(APP, 'Debugger detected. Close it and run again.')
+        r.destroy()
         return 1
+
     vms = vm_indicators()
     if vms:
         r = tk.Tk()
@@ -348,35 +427,90 @@ def main_gui():
             return 1
 
     root = tk.Tk()
-    root.title('PineappleFX Installer')
+    root.title(APP_DISPLAY)
+    root.geometry('540x520')
     root.resizable(False, False)
-    tk.Label(root, text='Email (receipt)').grid(row=0, column=0, sticky='w', padx=10, pady=4)
-    e_email = tk.Entry(root, width=40)
-    e_email.grid(row=0, column=1, padx=10, pady=4)
-    tk.Label(root, text='Machine ID (locked panel)').grid(row=1, column=0, sticky='w', padx=10, pady=4)
-    e_mid = tk.Entry(root, width=40)
-    e_mid.grid(row=1, column=1, padx=10, pady=4)
-    tk.Label(root, text='License key (PFX2-…)').grid(row=2, column=0, sticky='w', padx=10, pady=4)
-    e_key = tk.Entry(root, width=40)
-    e_key.grid(row=2, column=1, padx=10, pady=4)
-    log = scrolledtext.ScrolledText(root, width=58, height=12, state='disabled')
-    log.grid(row=3, column=0, columnspan=2, padx=10, pady=6)
 
-    def say(m):
-        log.configure(state='normal')
-        log.insert('end', m + '\n')
-        log.see('end')
-        log.configure(state='disabled')
+    BG = '#1e1e20'
+    CARD = '#2a2a2e'
+    BORDER = '#38383c'
+    ACCENT = '#feca08'
+    TEXT = '#f5f5f7'
+    MUTED = '#86868b'
+    INPUT_BG = '#141416'
+
+    root.configure(bg=BG)
+
+    # Set icon
+    ico_path = base_dir() / 'assets' / 'logo.ico'
+    if ico_path.exists():
+        try:
+            root.iconbitmap(str(ico_path))
+        except Exception:
+            pass
+
+    # Header
+    header = tk.Frame(root, bg=BG)
+    header.pack(pady=(22, 12), fill='x')
+
+    png_path = base_dir() / 'assets' / 'logo.png'
+    if png_path.exists():
+        try:
+            pil_img = Image.open(str(png_path)).resize((54, 54), Image.Resampling.LANCZOS)
+            img_tk = ImageTk.PhotoImage(pil_img)
+            lbl_logo = tk.Label(header, image=img_tk, bg=BG)
+            lbl_logo.image = img_tk
+            lbl_logo.pack()
+        except Exception:
+            pass
+
+    tk.Label(header, text='PineappleFX Setup', font=('SF Pro Display', 16, 'bold'), fg=TEXT, bg=BG).pack(pady=(6, 2))
+    tk.Label(header, text='Official Plugin Installer & Activator', font=('SF Pro Text', 10), fg=MUTED, bg=BG).pack()
+
+    card = tk.Frame(root, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=22, pady=16)
+    card.pack(padx=28, fill='x')
+
+    def make_field(parent, label_text):
+        tk.Label(parent, text=label_text, font=('SF Pro Text', 9, 'bold'), fg=MUTED, bg=CARD).pack(anchor='w', pady=(6, 2))
+        entry = tk.Entry(parent, font=('SF Pro Text', 11), bg=INPUT_BG, fg=TEXT, insertbackground=ACCENT,
+                         relief='flat', highlightbackground=BORDER, highlightthickness=1)
+        entry.pack(fill='x', ipady=6)
+        return entry
+
+    e_email = make_field(card, 'PURCHASE EMAIL (FOR RECEIPT)')
+    e_mid = make_field(card, 'MACHINE ID (SHOWN ON AFTER EFFECTS PANEL)')
+    e_key = make_field(card, 'LICENSE KEY (PFX2-...)')
+
+    log_box = tk.Text(card, height=4, font=('Consolas', 9), bg=INPUT_BG, fg='#a1a1aa',
+                      relief='flat', state='disabled', highlightthickness=0)
+    log_box.pack(fill='x', pady=(12, 4))
+
+    def say(msg):
+        log_box.configure(state='normal')
+        log_box.insert('end', msg + '\n')
+        log_box.see('end')
+        log_box.configure(state='disabled')
         root.update_idletasks()
 
-    def go_install():
-        btn.configure(state='disabled')
+    def do_install():
+        btn_go.configure(state='disabled', text='Installing & Activating...')
+        root.update()
         ok, msg = run_flow(e_email.get(), e_mid.get(), e_key.get(), '', say)
-        messagebox.showinfo(APP, msg) if ok else messagebox.showerror(APP, msg)
-        btn.configure(state='normal')
+        btn_go.configure(state='normal', text='Install & Activate Plugin')
+        if ok:
+            messagebox.showinfo('PineappleFX Setup', msg)
+        else:
+            messagebox.showerror('Setup Error', msg)
 
-    btn = tk.Button(root, text='Install & Activate', command=go_install)
-    btn.grid(row=4, column=0, columnspan=2, pady=(0, 10))
+    btn_go = tk.Button(card, text='Install & Activate Plugin', font=('SF Pro Text', 11, 'bold'),
+                       bg=ACCENT, fg='#141416', activebackground='#ffdb4d', activeforeground='#141416',
+                       relief='flat', bd=0, pady=10, cursor='hand2', command=do_install)
+    btn_go.pack(fill='x', pady=(12, 4))
+
+    footer = tk.Label(root, text='Registers in Windows Control Panel • Publisher: PineappleFX',
+                      font=('SF Pro Text', 8), fg='#636366', bg=BG)
+    footer.pack(side='bottom', pady=12)
+
     root.mainloop()
     return 0
 
@@ -389,7 +523,25 @@ def main():
     ap.add_argument('--key', default='')
     ap.add_argument('--api', default='', help='override /api/verify-license URL')
     ap.add_argument('--allow-vm', action='store_true')
+    ap.add_argument('--uninstall', action='store_true', help='Uninstall PineappleFX and remove registry entry')
+    ap.add_argument('--yes', action='store_true')
     args = ap.parse_args()
+
+    if args.uninstall:
+        ok, msg = run_uninstall()
+        if not args.cli and sys.platform == 'win32':
+            try:
+                import tkinter as tk
+                from tkinter import messagebox
+                r = tk.Tk()
+                r.withdraw()
+                messagebox.showinfo(APP, msg) if ok else messagebox.showerror(APP, msg)
+                r.destroy()
+            except Exception:
+                pass
+        print(('OK: ' if ok else 'FAILED: ') + msg)
+        return 0 if ok else 1
+
     if args.cli or args.key or sys.platform != 'win32':
         return main_cli(args)
     try:

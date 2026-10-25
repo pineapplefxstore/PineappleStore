@@ -5,7 +5,7 @@ a = Analysis(
     ['C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/tools/installer.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/build/exe-payload', 'payload')],
+    datas=[('C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/build/exe-payload', 'payload'), ('C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/assets', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,4 +35,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/tools/version_plugin.txt',
+    icon=['C:/Users/quiff/Downloads/Telegram Desktop/PineappleFX/assets/logo.ico'],
 )

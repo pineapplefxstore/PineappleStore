@@ -1,0 +1,38 @@
+# UTF-8
+#
+# Version information for Pineapple ZXP Installer
+#
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(2, 0, 0, 0),
+    prodvers=(2, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          '040904B0',
+          [
+            StringStruct('CompanyName', 'PineappleFX'),
+            StringStruct('FileDescription', 'Pineapple ZXP Installer for Adobe Extensions'),
+            StringStruct('FileVersion', '2.0.0.0'),
+            StringStruct('InternalName', 'Pineapple-ZXP-Installer'),
+            StringStruct('LegalCopyright', 'Copyright (C) 2026 PineappleFX. All rights reserved.'),
+            StringStruct('OriginalFilename', 'Pineapple-ZXP-Installer.exe'),
+            StringStruct('ProductName', 'Pineapple ZXP Installer'),
+            StringStruct('ProductVersion', '2.0.0.0'),
+            StringStruct('Publisher', 'PineappleFX'),
+            StringStruct('LegalTrademarks', 'PineappleFX')
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
