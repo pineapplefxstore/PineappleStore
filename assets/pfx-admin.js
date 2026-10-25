@@ -670,9 +670,15 @@
     emails.sort().forEach(function(em){
       var ms = vault[em] || {}, keys = Object.keys(ms).sort();
       var hasBeta = !!betaMapNow[em.toLowerCase()];
+      var affApps = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+      var isAffiliate = false;
+      Object.values(affApps).forEach(function(a){ if(a.email && a.email.toLowerCase() === em.toLowerCase() && a.status === "approved") isAffiliate = true; });
+
       uh += '<div class="user-block"><b>' + escHtml(em) + '</b> <span style="color:var(--label-3);font-size:12px;">· ' + keys.length + ' computer' + (keys.length === 1 ? "" : "s") + '</span>'
+        + (isAffiliate ? ' <span class="tag" style="font-size:10px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;">affiliate</span>' : '')
         + (hasBeta ? ' <span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;">beta tester</span>' : '')
-        + ' <button class="mini-btn" data-toggle-user-beta="' + escHtml(em) + '" type="button" style="margin-left:8px;">' + (hasBeta ? 'Revoke Beta' : 'Grant Beta') + '</button>'
+        + ' <button class="mini-btn" data-convert-affiliate="' + escHtml(em) + '" type="button" style="margin-left:8px;background:var(--accent);color:#241a04;font-weight:700;">' + (isAffiliate ? '✓ Affiliate Active' : 'Convert to Affiliate') + '</button>'
+        + ' <button class="mini-btn" data-toggle-user-beta="' + escHtml(em) + '" type="button" style="margin-left:4px;">' + (hasBeta ? 'Revoke Beta' : 'Grant Beta') + '</button>'
         + ' <button class="mini-btn" data-reset-pw="' + escHtml(em) + '" type="button" style="margin-left:4px;">Reset Password</button>'
         + ' <button class="danger-btn del-cpn-btn" data-del-person="' + escHtml(em) + '" type="button" title="Remove this person and all their keys on this device">Remove person</button>';
       keys.forEach(function(mch){
@@ -688,6 +694,86 @@
     });
     if(ub){
       ub.innerHTML = uh;
+      Array.prototype.forEach.call(ub.querySelectorAll("[data-convert-affiliate]"), function(b){
+        b.onclick = function(){
+          var em = b.getAttribute("data-convert-affiliate").toLowerCase();
+          var affApps = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+          
+          // Check if already an affiliate
+          var existingApp = null;
+          Object.values(affApps).forEach(function(a){
+            if(a.email && a.email.toLowerCase() === em) existingApp = a;
+          });
+
+          // 1. Grant Beta Access automatically
+          var betas = lsGet("pfx-beta-access", {});
+          betas[em] = { email: em, name: em, at: Date.now() };
+          lsSet("pfx-beta-access", betas);
+
+          // 2. Generate a 20% discount coupon code if they don't have one
+          var code = existingApp ? existingApp.couponCode : "";
+          if(!code){
+            var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
+            for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
+            var uname = em.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PARTNER";
+            code = "AFX-" + uname + "-" + s.slice(4);
+            if(window.PFXCoupons && window.PFXCoupons.shareable){
+              var signedAff = window.PFXCoupons.shareable(code, 20, "percent");
+              if(signedAff) code = signedAff;
+            }
+            if(window.PFXCoupons){
+              window.PFXCoupons.create(code, {
+                kind: "percent",
+                pct: 20,
+                note: "Affiliate 20% off: " + em,
+                maxUses: null,
+                uses: 0,
+                created: Date.now(),
+                program: "affiliate"
+              });
+            }
+          }
+
+          // 3. Save as approved affiliate record
+          var appId = existingApp ? existingApp.id : ("af-" + Date.now().toString(36));
+          affApps[appId] = {
+            id: appId,
+            name: em.split("@")[0],
+            email: em,
+            platform: "Direct Creator",
+            channelId: em,
+            subs: 100,
+            insights: "Converted from admin panel",
+            status: "approved",
+            couponCode: code,
+            created: existingApp ? existingApp.created : Date.now(),
+            approvedAt: Date.now()
+          };
+          localStorage.setItem("pfx-aff-applications", JSON.stringify(affApps));
+
+          // 4. Also register suggestion thread access so they can submit suggestions
+          var allSug = lsGet("pfx-aff-suggestions", {});
+          if(!allSug[appId]){
+            allSug[appId] = {
+              id: appId,
+              name: em.split("@")[0],
+              email: em,
+              type: "Feature Request / Roadmap",
+              message: "Affiliate creator program activated.",
+              status: "open",
+              beta: true,
+              at: Date.now()
+            };
+            lsSet("pfx-aff-suggestions", allSug);
+          }
+
+          showToast("Converted " + em + " to Affiliate with 20% coupon " + code + " & Beta Access!");
+          renderAdmin();
+          renderAffBeta();
+          renderAffApps();
+          renderAffSuggestions();
+        };
+      });
       Array.prototype.forEach.call(ub.querySelectorAll("[data-toggle-user-beta]"), function(b){
         b.onclick = function(){
           var em = b.getAttribute("data-toggle-user-beta").toLowerCase();

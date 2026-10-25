@@ -517,20 +517,35 @@ window.PineappleFXLic = (function(){
     var machines = Object.keys(vault).sort();
     var primary = machines.length ? primaryOf(vault, machines) : null;
 
-    // Check if current user is an approved beta tester
-    var isBetaTester = false;
+    // Check if current user is owner or an approved beta tester / affiliate
+    var isOwner = false;
+    try {
+      if(window.PFXCore && window.PFXCore.isOwner) isOwner = window.PFXCore.isOwner();
+      if(!isOwner && window.PFXCore && window.PFXCore.ADMIN_EMAIL) {
+        isOwner = (acct.toLowerCase() === window.PFXCore.ADMIN_EMAIL.toLowerCase());
+      }
+    } catch(e){}
+
+    var isBetaTester = isOwner;
+    var isAffiliate = isOwner;
     try {
       var betaList = JSON.parse(localStorage.getItem("pfx-beta-access") || "{}");
       if(betaList[acct.toLowerCase()]) isBetaTester = true;
+      var affApps = JSON.parse(localStorage.getItem("pfx-aff-applications") || "{}");
+      Object.values(affApps).forEach(function(a){
+        if(a.email && a.email.toLowerCase() === acct.toLowerCase() && a.status === "approved") isAffiliate = true;
+      });
     } catch(e){}
 
     var html = '<p style="font-size:13px;color:var(--label-2);">Logged in as <b>' + esc(acct) + '</b> '
+      + (isOwner ? '<span class="tag" style="font-size:10px;background:rgba(254,202,8,0.2);color:#feca08;border:1px solid #feca08;margin:0 4px;">👑 OWNER</span>' : '')
+      + (isAffiliate && !isOwner ? '<span class="tag" style="font-size:10px;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;margin:0 4px;">PARTNER</span>' : '')
       + (isBetaTester ? '<span class="tag" style="font-size:10px;background:rgba(254,202,8,0.15);color:#feca08;border:1px solid #feca08;margin:0 4px;">🧪 BETA TESTER</span>' : '')
       + '· ' + machines.length + ' machine' + (machines.length === 1 ? '' : 's')
       + ' · <a href="#" id="dashLogout" style="color:var(--accent);font-weight:700;">log out</a></p>'
       + '<div style="height:10px;"></div>';
 
-    // Show Beta Download Card for Beta Testers
+    // Show Beta Download Card for Beta Testers & Owner
     if(isBetaTester){
       var betaZxp = localStorage.getItem("pfx-beta-installer-zxp") || "";
       var betaVer = localStorage.getItem("pfx-beta-installer-version") || "Beta Preview";
@@ -540,6 +555,19 @@ window.PineappleFXLic = (function(){
         + '<p style="font-size:12px;color:var(--label-2);margin:4px 0 8px;">You have early access to test PineappleFX beta builds (' + esc(betaVer) + '). Install this build in After Effects with your license key.</p>'
         + (betaZxp ? '<button class="btn btn-pay" id="dashDlBeta" type="button" style="padding:7px 14px;font-size:12px;">⬇ Download ' + esc(betaName) + '</button>'
                   : '<span style="font-size:11.5px;color:var(--label-3);">No custom beta .zxp uploaded yet — using default build.</span>')
+        + '</div>';
+    }
+
+    // Show Affiliate Suggestions & Roadmap Box for Affiliates & Owner
+    if(isAffiliate){
+      html += '<div style="margin-bottom:14px;padding:12px;background:var(--grouped);border:1px solid var(--border);border-radius:10px;">'
+        + '<b style="font-size:13px;">💬 Affiliate Suggestions &amp; Requests</b>'
+        + '<p style="font-size:12px;color:var(--label-2);margin:4px 0 8px;">As an affiliate partner, share feature requests and roadmap suggestions directly with the creator.</p>'
+        + '<div style="display:flex;gap:8px;margin-bottom:6px;">'
+        + '<input type="text" id="dashSugMsg" placeholder="Describe your suggestion or feature request…" style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:12px;" />'
+        + '<button class="btn btn-pay" id="dashSugSend" type="button" style="padding:8px 14px;font-size:12px;white-space:nowrap;">Submit</button>'
+        + '</div>'
+        + '<p id="dashSugNotice" style="font-size:11px;color:#22c55e;margin:0;display:none;">✓ Suggestion submitted to the admin team!</p>'
         + '</div>';
     }
     if(!machines.length){
@@ -569,6 +597,30 @@ window.PineappleFXLic = (function(){
       if(e && e.preventDefault) e.preventDefault();
       if(window.PFXAuth) window.PFXAuth.logout();
     };
+    var dashSugSend = document.getElementById("dashSugSend");
+    if(dashSugSend){
+      dashSugSend.onclick = function(){
+        var inp = document.getElementById("dashSugMsg");
+        var val = (inp ? inp.value : "").trim();
+        if(!val) return;
+        var allS = JSON.parse(localStorage.getItem("pfx-aff-suggestions") || "{}");
+        var sugId = "sug-" + Date.now().toString(36) + "-" + Math.floor(Math.random()*1e9).toString(36);
+        allS[sugId] = {
+          id: sugId,
+          name: acct.split("@")[0],
+          email: acct,
+          type: "Feature Request / Roadmap",
+          message: val,
+          status: "open",
+          beta: isBetaTester,
+          at: Date.now()
+        };
+        localStorage.setItem("pfx-aff-suggestions", JSON.stringify(allS));
+        if(inp) inp.value = "";
+        var notice = document.getElementById("dashSugNotice");
+        if(notice){ notice.style.display = "block"; setTimeout(function(){ notice.style.display = "none"; }, 4000); }
+      };
+    }
     var dashDlBetaBtn = document.getElementById("dashDlBeta");
     if(dashDlBetaBtn){
       dashDlBetaBtn.onclick = function(){
