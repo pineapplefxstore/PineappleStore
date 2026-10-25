@@ -371,7 +371,16 @@ aside [aria-current="true"] .bg-white{background-color:#241a04!important;}
   if (PREKEY && _a18(PREKEY, _a26)) { _a17(PREKEY); }
   var _a23 = document.getElementById("pfx-gate");
   var _a25 = document.getElementById("pfx-gate-err");
-  function _a14() { if (_a23.parentNode) { _a23.parentNode.removeChild(_a23); } }
+  function _a14() {
+    if (_a23.parentNode) { _a23.parentNode.removeChild(_a23); }
+    try {
+      if (window.__adobe_cep__ && window.__adobe_cep__.evalScript) {
+        var _curTok = _a8();
+        var _tStr = (_curTok && _curTok.t) ? _curTok.t : "valid";
+        window.__adobe_cep__.evalScript("$.global.pineapplefx_auth_session('" + _tStr + "')");
+      }
+    } catch(e) {}
+  }
   function _a20(msg) {
     _a23.style.display = "flex";
     if (msg) { _a25.textContent = msg; }

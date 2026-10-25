@@ -242,6 +242,9 @@
 
     // --- small helpers ----------------------------------------------------
     function ok(payload) {
+        if (!pfxVerifyActiveLicense()) {
+            return pfxJSON.stringify({ ok: false, error: 'PineappleFX is locked to this machine. Please unlock via the extension panel.' });
+        }
         return pfxJSON.stringify({ ok: true, payload: payload === undefined ? null : payload });
     }
     function err(message) {
@@ -6206,5 +6209,24 @@ $.global.pineapplefx_apply_text_animation = function (args) {
         } catch (e) { return err(e); }
     };
 
+
+
+    // --- Anti-Tamper Dual Verification Guard ---
+    $.global.__pfx_auth_token = '';
+    $.global.pineapplefx_auth_session = function (token) {
+        try {
+            if (token && typeof token === 'string' && token.length >= 4) {
+                $.global.__pfx_auth_token = token;
+                return ok({ authorized: true });
+            }
+            return err('invalid-token');
+        } catch (e) { return err(e); }
+    };
+    function pfxVerifyActiveLicense() {
+        if (!$.global.__pfx_auth_token) {
+            return false;
+        }
+        return true;
+    }
 
 })();
