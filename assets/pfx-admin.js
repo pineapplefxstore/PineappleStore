@@ -605,16 +605,17 @@
       var tag = d.kind === "free" ? "FREE" : (d.pct + "% OFF");
       var uses = d.builtin ? "built-in" : ((d.uses || 0) + (d.maxUses != null ? "/" + d.maxUses : " uses"));
       var shared = window.PFXCoupons.isShareable(code);
+      var shareCode = shared ? code : window.PFXCoupons.shareable(code, d.pct, d.kind);
       var scope = "";
       if(!d.builtin){
         scope = shared
-          ? '<span class="tag" title="Verifies itself on any device — no publish step">🌍 all devices</span>'
-          : '<span class="tag" title="Only works in this browser — click Make shareable">⚠ this device</span>';
+          ? '<span class="tag" style="border-color:#22c55e;color:#22c55e;" title="Verifies itself on any device — no publish step">🌍 all devices</span>'
+          : '<span class="tag" style="border-color:#f59e0b;color:#f59e0b;" title="Click Copy or Make shareable to get the code for other devices">⚠ local name</span>';
       }
       html += '<div class="coupon-row"><code>' + escHtml(code) + '</code><span class="tag">' + tag + '</span>' + scope
         + '<span class="note">' + escHtml(d.note || "") + ' · ' + escHtml(uses) + '</span>'
-        + (d.builtin ? "" : '<button class="mini-btn copy-cpn-btn" data-copy-coupon="' + escHtml(code) + '" type="button">Copy</button>')
-        + (!d.builtin && !shared ? '<button class="mini-btn share-cpn-btn" data-share-coupon="' + escHtml(code) + '" type="button">Make shareable</button>' : '')
+        + (d.builtin ? "" : '<button class="mini-btn copy-cpn-btn" data-copy-coupon="' + escHtml(shareCode || code) + '" type="button" title="Copy code for any device">Copy</button>')
+        + (!d.builtin && !shared ? '<button class="mini-btn share-cpn-btn" data-share-coupon="' + escHtml(code) + '" type="button" title="Convert to permanent cross-device code">Make shareable</button>' : '')
         + (d.builtin ? "" : '<button class="danger-btn del-cpn-btn" data-del-coupon="' + escHtml(code) + '" type="button" title="Delete Coupon">🗑 Delete Coupon</button>')
         + '</div>';
     });
