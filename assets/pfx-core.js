@@ -161,9 +161,23 @@
     }
     return null;
   }
+  function isCouponRevoked(raw){
+    var c = String(raw || "").trim().toUpperCase();
+    if(!c) return false;
+    var rev = lsGet("pfx-revoked-coupons", {});
+    return !!rev[c];
+  }
+  function revokeCoupon(raw){
+    var c = String(raw || "").trim().toUpperCase();
+    if(!c) return;
+    var rev = lsGet("pfx-revoked-coupons", {});
+    rev[c] = Date.now();
+    lsSet("pfx-revoked-coupons", rev);
+  }
   function couponDef(raw){
     var c = String(raw || "").trim();
     if(!c) return null;
+    if(isCouponRevoked(c)) return null;
     if(BUILTIN_COUPONS[c]) return BUILTIN_COUPONS[c];
     var all = storeCoupons();
     if(all[c]) return all[c];
@@ -173,6 +187,7 @@
        so the applied-coupon UI and the admin list can see it too. */
     var signed = parseSignedCoupon(c);
     if(signed){
+      if(isCouponRevoked(c.toUpperCase())) return null;
       all[c.toUpperCase()] = signed;
       lsSet("pfx-coupons", all);
       return signed;
@@ -195,9 +210,14 @@
   window.PFXCoupons = {
     all: function(){
       var out = {}, k;
-      for(k in BUILTIN_COUPONS) out[k] = BUILTIN_COUPONS[k];
+      var rev = lsGet("pfx-revoked-coupons", {});
+      for(k in BUILTIN_COUPONS){
+        if(!rev[k.toUpperCase()]) out[k] = BUILTIN_COUPONS[k];
+      }
       var s = storeCoupons();
-      for(k in s) out[k] = s[k];
+      for(k in s){
+        if(!rev[k.toUpperCase()]) out[k] = s[k];
+      }
       return out;
     },
     get: couponDef,
@@ -215,6 +235,8 @@
     create: function(code, def){
       code = String(code || "").trim().toUpperCase();
       if(code.length < 4 || code.length > 40 || /[^A-Z0-9-]/.test(code)) return { ok: false, error: "Code: 4–40 chars, letters/numbers/dashes." };
+      var rev = lsGet("pfx-revoked-coupons", {});
+      if(rev[code]){ delete rev[code]; lsSet("pfx-revoked-coupons", rev); }
       if(BUILTIN_COUPONS[code] || storeCoupons()[code]) return { ok: false, error: "That code already exists." };
       if(def.kind !== "free" && !(def.pct >= 1 && def.pct <= 99)) return { ok: false, error: "Percent must be 1–99." };
       var s = storeCoupons();
@@ -224,10 +246,21 @@
       return { ok: true, code: code };
     },
     remove: function(code){
+      code = String(code || "").trim().toUpperCase();
+      revokeCoupon(code);
       var s = storeCoupons();
-      if(!s[code]) return false;
-      delete s[code];
+      var found = false;
+      for(var k in s){
+        if(k.toUpperCase() === code){
+          delete s[k];
+          found = true;
+        }
+      }
       lsSet("pfx-coupons", s);
+      try {
+        var active = (localStorage.getItem("pineapplefx-coupon") || "").toUpperCase();
+        if(active === code) localStorage.removeItem("pineapplefx-coupon");
+      } catch(e){}
       return true;
     },
     use: function(raw){
