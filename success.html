@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Order confirmed — PineappleFX</title>
+<title>Order confirmed â€” PineappleFX</title>
 <meta name="theme-color" content="#000000" />
 <link rel="icon" type="image/png" href="./assets/logo.png" />
 <style>
@@ -74,14 +74,14 @@ footer a:hover{text-decoration:underline}
 </nav>
 <main>
   <div id="ok" style="display:none;">
-    <div class="check">✓</div>
+    <div class="check">âœ“</div>
     <h1>Payment approved</h1>
     <p class="sub" id="amountLine"></p>
     <div class="card"><h3>Order</h3><div id="orderRows"></div></div>
     <div class="card" id="keyCard" style="display:none;"><h3>Your license key</h3>
       <div class="keybox" id="keyVal"></div>
       <button class="btn" id="copyKey" style="width:100%;">Copy key</button>
-      <p class="sub" style="margin:12px 0 0;">Paste it into the locked panel — it unlocks on your machine instantly, offline. Your installer arrives by email.</p>
+      <p class="sub" style="margin:12px 0 0;">Paste it into the locked panel â€” it unlocks on your machine instantly, offline. Your installer arrives by email.</p>
     </div>
     <div class="card" id="waitCard"><h3>What happens next</h3>
       <div id="waitBody"></div>
@@ -90,7 +90,7 @@ footer a:hover{text-decoration:underline}
       <ol class="steps">
         <li><b>1.</b> Run once as admin: <code>reg add HKCU\Software\Adobe\CSXS.11 /v PlayerDebugMode /t REG_SZ /d 1 /f</code></li>
         <li><b>2.</b> Install the personal <code>.zxp</code> from your purchase email with an extension manager.</li>
-        <li><b>3.</b> Restart After Effects → Window → Extensions → PineappleFX, paste your key. Done.</li>
+        <li><b>3.</b> Restart After Effects â†’ Window â†’ Extensions â†’ PineappleFX, paste your key. Done.</li>
       </ol>
     </div>
   </div>
@@ -101,7 +101,7 @@ footer a:hover{text-decoration:underline}
     <a class="btn" href="./store#pricing">Back to pricing</a>
   </div>
 </main>
-<footer>Questions? <a href="mailto:pineapplefx.store@gmail.com?subject=PineappleFX%20order">pineapplefx.store@gmail.com</a> <button id="copyMail" type="button" style="cursor:pointer;border:1px solid var(--hairline);background:var(--elevated);color:var(--label);border-radius:999px;padding:4px 14px;font-size:12px;font-weight:700;">⧉ copy</button> — include your order ID.</footer>
+<footer>Questions? <a href="mailto:pineapplefx.store@gmail.com?subject=PineappleFX%20order">pineapplefx.store@gmail.com</a> <button id="copyMail" type="button" style="cursor:pointer;border:1px solid var(--hairline);background:var(--elevated);color:var(--label);border-radius:999px;padding:4px 14px;font-size:12px;font-weight:700;">â§‰ copy</button> â€” include your order ID.</footer>
 </div>
 <script>
 (function(){
@@ -114,7 +114,7 @@ footer a:hover{text-decoration:underline}
   function paint(){
     var t = current();
     root.setAttribute("data-theme", t);
-    document.getElementById("themeBtn").textContent = (t === "dark") ? "☀" : "☾";
+    document.getElementById("themeBtn").textContent = (t === "dark") ? "â˜€" : "â˜¾";
   }
   document.getElementById("themeBtn").onclick = function(){
     var next = (root.getAttribute("data-theme") === "dark") ? "light" : "dark";
@@ -132,7 +132,7 @@ footer a:hover{text-decoration:underline}
   var WORKER_URL = "";
 
   function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-  function row(k, v){ return '<div class="kv"><span>' + k + '</span><span>' + esc(v || "—") + '</span></div>'; }
+  function row(k, v){ return '<div class="kv"><span>' + k + '</span><span>' + esc(v || "â€”") + '</span></div>'; }
   function copyText(txt){
     function done(){ toast("Copied."); }
     try {
@@ -180,7 +180,7 @@ footer a:hover{text-decoration:underline}
           + (!q.device ? "<input id='sDev' class='mono' placeholder='Machine ID (on the locked panel)' maxlength='8' />" : "")
           + "<button class='btn btn-ghost' id='sBack'>Complete my details</button></div>"
           + "<p style='font-size:12px;color:var(--label-3);margin-top:8px;'>Sends you back to the order form with everything prefilled.</p>"
-        : "<p style='font-size:13.5px;'>Everything needed is on file — nothing left to do but install.</p>");
+        : "<p style='font-size:13.5px;'>Everything needed is on file â€” nothing left to do but install.</p>");
     var back = document.getElementById("sBack");
     if(back) back.onclick = function(){
       var em = document.getElementById("sEmail"), dv = document.getElementById("sDev");
@@ -193,7 +193,7 @@ footer a:hover{text-decoration:underline}
     };
   }
   if(WORKER_URL && q.email && q.device){
-    waitBody.innerHTML = "<div class='spin'></div><p style='font-size:13.5px;text-align:center;'>Preparing your license key…</p>";
+    waitBody.innerHTML = "<div class='spin'></div><p style='font-size:13.5px;text-align:center;'>Preparing your license keyâ€¦</p>";
     fetch(WORKER_URL, {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ orderID:q.order, email:q.email, device:q.device })
@@ -202,7 +202,7 @@ footer a:hover{text-decoration:underline}
         document.getElementById("keyCard").style.display = "block";
         document.getElementById("keyVal").textContent = res.key;
         document.getElementById("copyKey").onclick = function(){ copyText(res.key, "Key copied."); };
-        waitBody.innerHTML = "<p style='font-size:13.5px;'>Key issued just now — a copy was also emailed to <b>" + esc(q.email) + "</b> with your installer.</p>";
+        waitBody.innerHTML = "<p style='font-size:13.5px;'>Key issued just now â€” a copy was also emailed to <b>" + esc(q.email) + "</b> with your installer.</p>";
       } else { manualCard(); }
     }).catch(function(){ manualCard(); });
     setTimeout(function(){
@@ -214,8 +214,10 @@ footer a:hover{text-decoration:underline}
   var cp = document.getElementById("copyKey");
   if(cp) cp.onclick = function(){ copyText(document.getElementById("keyVal").textContent, "Key copied."); };
   var cm = document.getElementById("copyMail");
-  if(cm) cm.onclick = function(){ copyText("pineapplefx.store@gmail.com"); cm.textContent = "✓ copied!"; setTimeout(function(){ cm.textContent = "⧉ copy"; }, 2000); };
+  if(cm) cm.onclick = function(){ copyText("pineapplefx.store@gmail.com"); cm.textContent = "âœ“ copied!"; setTimeout(function(){ cm.textContent = "â§‰ copy"; }, 2000); };
 })();
 </script>
+<a class="support-fab" href="https://t.me/PineappleFxstore_bot" target="_blank" rel="noopener noreferrer" aria-label="Need Help & Support?"><span class="tg-icon">ðŸ’¬</span><span class="fab-label">Need Help &amp; Support?</span></a>
 </body>
 </html>
+
