@@ -896,10 +896,12 @@
       var out = document.getElementById("mkResult");
       err.textContent = "";
       if(!isAdmin()){ err.textContent = "Admin only."; return; }
-      var email = document.getElementById("mkEmail").value.trim();
+      var email = document.getElementById("mkEmail").value.trim().toLowerCase();
       var nm = document.getElementById("mkMachine").value.trim().toUpperCase();
-      if(!/^[A-Za-z0-9]{8}$/.test(nm)){ err.textContent = "Machine ID must be exactly 8 letters/numbers."; return; }
+      if(!email && !nm){ err.textContent = "Enter at least a user email or Machine ID."; return; }
       if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = "That email doesn't look right."; return; }
+      if(!nm) nm = "PENDING";
+      else if(nm !== "PENDING" && !/^[A-Za-z0-9]{8}$/.test(nm)){ err.textContent = "Machine ID must be exactly 8 letters/numbers (or leave empty for PENDING)."; return; }
       function showKey(key, where){
         document.getElementById("mkKey").textContent = key;
         document.getElementById("mkKey").setAttribute("data-key", key);
@@ -913,22 +915,43 @@
             mkCreate.disabled = false;
             if(!r.ok){ err.textContent = "Server refused (" + (r.error || "?") + ")."; return; }
             showKey(r.key, "Saved to the server for " + (email || nm) + ".");
-            showToast("Key made for " + nm);
+            showToast("Key made for " + (email || nm));
             renderAdmin();
           }).catch(function(e){
             mkCreate.disabled = false;
             err.textContent = String(e && e.message) === "session-expired" ? "Session expired — reconnect." : "Server unreachable — minting locally instead.";
             if(String(e && e.message) !== "session-expired"){
-              var k = adminMintKey(nm);
-              if(k) showKey(k, "Made offline — the server was unreachable, so save this key somewhere yourself.");
+              var k = (nm === "PENDING") ? ("PFX2-RESERVED-" + Date.now().toString(36).toUpperCase().slice(-8)) : adminMintKey(nm);
+              if(k){
+                if(email && window.PFXVault && window.PFXVault.save){
+                  window.PFXVault.save(email, nm, { key: k, at: Date.now(), orderID: "ADMIN", placeholder: (nm === "PENDING") });
+                }
+                showKey(k, "Saved directly to user account (" + (email || "offline") + ").");
+                renderAdmin();
+              }
             }
           });
         return;
       }
-      var k = adminMintKey(nm);
+      var k = (nm === "PENDING") ? ("PFX2-RESERVED-" + Date.now().toString(36).toUpperCase().slice(-8)) : adminMintKey(nm);
       if(!k){ err.textContent = "Local mint unavailable."; return; }
-      showKey(k, "Made offline (no server connected) — save this key somewhere yourself.");
-      showToast("Key made for " + nm);
+      if(email){
+        // Ensure user account exists in authUsers
+        var users = authUsers();
+        if(!users[email]){
+          users[email] = { created: Date.now(), role: "user" };
+          lsSet("pfx-users", users);
+        }
+        if(window.PFXVault && window.PFXVault.save){
+          window.PFXVault.save(email, nm, { key: k, at: Date.now(), orderID: "ADMIN", placeholder: (nm === "PENDING") });
+        }
+        showKey(k, "Saved directly to account for " + email + (nm === "PENDING" ? " (PC activation pending in their dashboard)" : "") + ".");
+      } else {
+        showKey(k, "Made offline (no user email assigned) — copy and deliver manually.");
+      }
+      showToast("Key made & assigned to " + (email || nm));
+      renderAdmin();
+      if(window.PineappleFXLic && window.PineappleFXLic.refreshDashboard) window.PineappleFXLic.refreshDashboard();
     };
   }
   var mkCopy = document.getElementById("mkCopy");

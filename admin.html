@@ -132,12 +132,12 @@
     <button class="mini-btn" id="adminExport" type="button" style="margin-top:6px;">⬇ Export backup (JSON)</button>
   </div>
   <div class="lic-form" style="margin-top:12px;">
-    <b>🛠 Make a key by hand</b>
-    <p style="font-size:13px;color:var(--label-2);">Backup tool: paste the buyer's Machine ID (the 8 characters their panel shows) and get a working key on the spot — no payment, no email needed. Uses the server when it is connected, and mints locally when it is not.</p>
-    <label for="mkEmail" style="display:block;margin-top:10px;">Buyer email (optional)<input id="mkEmail" type="email" autocomplete="off" placeholder="buyer@example.com" /></label>
-    <label for="mkMachine" style="display:block;">Machine ID<input id="mkMachine" class="mono" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABCD1234" style="text-transform:uppercase;" /></label>
-    <p style="font-size:12px;color:var(--label-3);margin:6px 0 0;">The buyer opens their locked PineappleFX panel and reads it from the line that says <b>Computer ID</b>.</p>
-    <button class="btn btn-pay" id="mkCreate" type="button" style="width:100%;margin-top:10px;">Make key</button>
+    <b>🛠 Make &amp; assign key to user</b>
+    <p style="font-size:13px;color:var(--label-2);">Enter the buyer's email. If they don't have their 8-character Machine ID yet, you can leave Machine ID blank (or enter PENDING) to issue a reserved license directly into their account!</p>
+    <label for="mkEmail" style="display:block;margin-top:10px;">User / buyer email<input id="mkEmail" type="email" autocomplete="off" placeholder="buyer@example.com" /></label>
+    <label for="mkMachine" style="display:block;">Machine ID (optional — leave blank for PENDING)<input id="mkMachine" class="mono" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABCD1234 (or leave empty)" style="text-transform:uppercase;" /></label>
+    <p style="font-size:12px;color:var(--label-3);margin:6px 0 0;">Keys made with an email are automatically saved directly into the user's account dashboard.</p>
+    <button class="btn btn-pay" id="mkCreate" type="button" style="width:100%;margin-top:10px;">Generate &amp; Assign Key to Account</button>
     <p class="auth-err" id="mkErr" style="min-height:18px;"></p>
     <div id="mkResult" style="display:none;">
       <div class="keyline-big" id="mkKey"></div>
