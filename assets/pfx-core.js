@@ -112,6 +112,55 @@
     "OWNPFX-UKVL&{4B": { kind: "free", note: "Owner", builtin: true }
   };
   function storeCoupons(){ return lsGet("pfx-coupons", {}); }
+  /* ---- Shareable (cross-device) percent-off codes -----------------------
+     Production is static GitHub Pages: there is no backend a buyer's phone
+     could ask "is this code real?", and the admin's localStorage never leaves
+     the admin's browser. So a coupon minted in the admin panel used to read
+     "That code did not work." on every other device.
+
+     Fix: percent-off codes carry their own proof. The last dash group is an
+     8-char signature over the code body + the discount percentage, so any
+     browser can verify the code offline — no publishing step, no server.
+     A code created in the admin panel therefore works on every device
+     instantly.
+
+     Signature space is 40 bits, which stops typos and copy/paste mistakes.
+     This is a client-side shop (the price is rendered in the browser), so
+     discount codes are an honour system by nature. A free code still cannot
+     mint a key on its own — key minting is server-only and fails closed. */
+  var CPN_ALPHA = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
+  var CPN_SECRET = "pfxc-9f3a7d1e6b2048c5aa71d9e3";
+  function cpnSig(base, kind, pct){
+    var s = "pfxc1|" + CPN_SECRET + "|" + kind + "|" + String(base).toUpperCase() + "|" + pct;
+    var h1 = 0x811c9dc5, h2 = 0x9e3779b9;
+    for(var i = 0; i < s.length; i++){
+      var c = s.charCodeAt(i);
+      h1 ^= c; h1 = Math.imul(h1, 0x01000193);
+      h2 = Math.imul(h2 ^ c, 0x85ebca6b);
+    }
+    var out = "";
+    for(var j = 0; j < 4; j++) out += CPN_ALPHA.charAt((h1 >>> (j * 5)) % CPN_ALPHA.length);
+    for(var k = 0; k < 4; k++) out += CPN_ALPHA.charAt((h2 >>> (k * 5)) % CPN_ALPHA.length);
+    return out;
+  }
+  function parseSignedCoupon(raw){
+    var code = String(raw || "").trim().toUpperCase();
+    var m = /^(.*)-([A-Z0-9]{8})$/.exec(code);
+    if(!m) return null;
+    var base = m[1], sig = m[2];
+    if(base.length < 2 || base.length > 40) return null;
+    for(var p = 1; p <= 99; p++){
+      if(cpnSig(base, "percent", p) === sig){
+        return { kind: "percent", pct: p, note: "Shareable code", maxUses: null, uses: 0, signed: true };
+      }
+    }
+    /* Free codes validate anywhere too, but a free code never mints a key by
+       itself — the server still has the final say at claim time. */
+    if(cpnSig(base, "free", 0) === sig){
+      return { kind: "free", pct: 0, note: "Shareable free code", maxUses: null, uses: 0, signed: true };
+    }
+    return null;
+  }
   function couponDef(raw){
     var c = String(raw || "").trim();
     if(!c) return null;
@@ -120,6 +169,14 @@
     if(all[c]) return all[c];
     var up = c.toUpperCase(), keys = Object.keys(BUILTIN_COUPONS).concat(Object.keys(all));
     for(var i = 0; i < keys.length; i++){ if(keys[i].toUpperCase() === up) return (BUILTIN_COUPONS[keys[i]] || all[keys[i]]); }
+    /* Self-verifying code — works on any device, no registry needed. Cache it
+       so the applied-coupon UI and the admin list can see it too. */
+    var signed = parseSignedCoupon(c);
+    if(signed){
+      all[c.toUpperCase()] = signed;
+      lsSet("pfx-coupons", all);
+      return signed;
+    }
     return null;
   }
   function couponKindOf(raw){ var d = couponDef(raw); return d ? d.kind : null; }
@@ -145,9 +202,19 @@
     },
     get: couponDef,
     usable: couponUsable,
+    /* Turn "SUMMER25" + 25 into the self-verifying code "SUMMER25-XXXXXXXX"
+       that validates on every device. kind is "percent" (default) or "free". */
+    shareable: function(base, pct, kind){
+      var b = String(base || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/^-+|-+$/g, "").slice(0, 24);
+      var k = (kind === "free") ? "free" : "percent";
+      var p = k === "free" ? 0 : Math.min(99, Math.max(1, Math.round(+pct || 0)));
+      if(b.length < 2) return null;
+      return b + "-" + cpnSig(b, k, p);
+    },
+    isShareable: function(code){ return !!parseSignedCoupon(code); },
     create: function(code, def){
       code = String(code || "").trim().toUpperCase();
-      if(code.length < 4 || code.length > 24 || /[^A-Z0-9-]/.test(code)) return { ok: false, error: "Code: 4–24 chars, letters/numbers/dashes." };
+      if(code.length < 4 || code.length > 40 || /[^A-Z0-9-]/.test(code)) return { ok: false, error: "Code: 4–40 chars, letters/numbers/dashes." };
       if(BUILTIN_COUPONS[code] || storeCoupons()[code]) return { ok: false, error: "That code already exists." };
       if(def.kind !== "free" && !(def.pct >= 1 && def.pct <= 99)) return { ok: false, error: "Percent must be 1–99." };
       var s = storeCoupons();
@@ -549,7 +616,9 @@
       couponApplyBtn.disabled = false;
       if(hit){ accept(hit); return; }
       msg.style.color = "#e5484d";
-      msg.textContent = "That code did not work.";
+      msg.textContent = /-[A-Z0-9]{8}$/i.test(v)
+        ? "That code did not work. Check for typos — or ask support for a fresh code."
+        : "That code did not work. Copy the whole code — discount codes end with 8 extra characters.";
     });
   };
   /* ---- account modal + session chrome ---- */

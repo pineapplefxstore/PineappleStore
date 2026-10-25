@@ -67,7 +67,7 @@
   </div>
   <div class="lic-form" style="margin-top:12px;">
     <b>Discount codes</b>
-    <p style="font-size:13px;color:var(--label-2);">Make a code, pick free or % off. When you are connected, codes save to the shop right away. When offline, they work on this device only. Percent-off codes can also be published for every buyer — use the button below, then commit the file it downloads.</p>
+    <p style="font-size:13px;color:var(--label-2);">Make a code, pick free or % off. Every code is self-verifying, so it works on <b>every device</b> the moment you create it — a signature is added automatically (e.g. <code>SUMMER25</code> becomes <code>SUMMER25-XXXXXXXX</code>). Free codes still need the license server to issue the key.</p>
     <div class="admin-form">
       <label for="cpCode">Code
         <span style="display:flex;gap:8px;margin-top:5px;">
@@ -104,7 +104,7 @@
     </div>
     <div id="couponList"></div>
     <button class="btn btn-ghost" id="cpPublish" type="button" style="width:100%;margin-top:10px;">⬇️ Publish percent-off codes to website (coupons.json)</button>
-    <p style="font-size:12px;color:var(--label-2);margin-top:6px;">Downloads a <code>coupons.json</code> the store site can check without a server. Only percent-off codes go in it — free codes stay private on this device.</p>
+    <p style="font-size:12px;color:var(--label-2);margin-top:6px;">Optional. New percent-off codes already work on every device. This downloads a <code>coupons.json</code> for older, non-shareable codes — commit it to the repo to activate them. Free codes never go in it.</p>
   </div>
   <div class="lic-form" style="margin-top:12px;">
     <b>Partner program — who brings buyers?</b>

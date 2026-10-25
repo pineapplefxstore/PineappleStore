@@ -21,7 +21,7 @@ import { db } from "./_lib/db.js";
 import { cors, json, readBody, requireAdmin, isAccountDisabled } from "./_lib/auth.js";
 import { mintLicense, normalizeKey, normalizeMachineId, verifySignature } from "./_lib/license.js";
 
-const CODE_RE = /^[A-Z0-9-]{4,24}$/;
+const CODE_RE = /^[A-Z0-9-]{4,40}$/;
 
 export default async function handler(req, res) {
   cors(req, res);

@@ -604,13 +604,45 @@
       var d = coupons[code];
       var tag = d.kind === "free" ? "FREE" : (d.pct + "% OFF");
       var uses = d.builtin ? "built-in" : ((d.uses || 0) + (d.maxUses != null ? "/" + d.maxUses : " uses"));
-      html += '<div class="coupon-row"><code>' + escHtml(code) + '</code><span class="tag">' + tag + '</span>'
+      var shared = window.PFXCoupons.isShareable(code);
+      var scope = "";
+      if(!d.builtin){
+        scope = shared
+          ? '<span class="tag" title="Verifies itself on any device — no publish step">🌍 all devices</span>'
+          : '<span class="tag" title="Only works in this browser — click Make shareable">⚠ this device</span>';
+      }
+      html += '<div class="coupon-row"><code>' + escHtml(code) + '</code><span class="tag">' + tag + '</span>' + scope
         + '<span class="note">' + escHtml(d.note || "") + ' · ' + escHtml(uses) + '</span>'
+        + (d.builtin ? "" : '<button class="mini-btn copy-cpn-btn" data-copy-coupon="' + escHtml(code) + '" type="button">Copy</button>')
+        + (!d.builtin && !shared ? '<button class="mini-btn share-cpn-btn" data-share-coupon="' + escHtml(code) + '" type="button">Make shareable</button>' : '')
         + (d.builtin ? "" : '<button class="danger-btn del-cpn-btn" data-del-coupon="' + escHtml(code) + '" type="button" title="Delete Coupon">🗑 Delete Coupon</button>')
         + '</div>';
     });
     if(cl){
       cl.innerHTML = html || '<p style="font-size:13px;color:var(--label-2);">No coupons.</p>';
+      Array.prototype.forEach.call(cl.querySelectorAll("[data-copy-coupon]"), function(b){
+        b.onclick = function(){
+          var c = b.getAttribute("data-copy-coupon");
+          try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c); } catch(e){}
+          showToast("Copied " + c);
+        };
+      });
+      Array.prototype.forEach.call(cl.querySelectorAll("[data-share-coupon]"), function(b){
+        b.onclick = function(){
+          var old = b.getAttribute("data-share-coupon");
+          var all = window.PFXCoupons.all(), d = all[old];
+          if(!d) return;
+          var next = window.PFXCoupons.shareable(old, d.pct, d.kind);
+          if(!next){ showToast("That code can't be made shareable."); return; }
+          var r = window.PFXCoupons.create(next, { kind: d.kind, pct: d.kind === "free" ? 0 : d.pct, note: d.note || "", maxUses: d.maxUses == null ? null : d.maxUses });
+          if(!r.ok){ showToast(r.error || "Could not upgrade that code."); return; }
+          window.PFXCoupons.remove(old);
+          try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(next); } catch(e){}
+          showToast("New code " + next + " copied — works on every device");
+          renderAdmin();
+          paintCoupon();
+        };
+      });
       Array.prototype.forEach.call(cl.querySelectorAll("[data-del-coupon]"), function(b){
         b.onclick = function(){
           var code = b.getAttribute("data-del-coupon");
@@ -737,12 +769,19 @@
       }
       if(!code){ err.textContent = "Enter a code (or leave blank for affiliate auto-code)."; return; }
       code = code.toUpperCase();
+      /* Every code is self-verifying so it works on ANY device with no server
+         and no publish step: "SUMMER25" becomes "SUMMER25-XXXXXXXX".
+         A free code still needs the server to actually mint a key. */
+      var signedCode = window.PFXCoupons.shareable(code, payload.pct, payload.kind);
+      if(!signedCode){ err.textContent = "Code needs at least 2 letters/numbers."; return; }
+      code = signedCode;
       function createdOk(label){
         document.getElementById("cpCode").value = "";
         document.getElementById("cpChannelId").value = "";
         document.getElementById("cpNote").value = "";
         document.getElementById("cpMax").value = "";
-        showToast("Coupon " + label + " created");
+        try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(label); } catch(e){}
+        showToast("Coupon " + label + " created & copied — works on every device");
         renderAdmin();
         paintCoupon();
       }
@@ -986,6 +1025,12 @@
     for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
     var uname = String(app.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) || "PARTNER";
     var code = "AFX-" + uname + "-" + s.slice(4);
+    // Sign it so the partner can use the code on their own device (and so the
+    // code validates for buyers on other devices) — minting still needs the server.
+    if(window.PFXCoupons && window.PFXCoupons.shareable){
+      var signedAff = window.PFXCoupons.shareable(code, 0, "free");
+      if(signedAff) code = signedAff;
+    }
     var coupons = window.PFXCoupons ? window.PFXCoupons.all() : {};
     if(coupons[code]){ showToast("Code collision, retry."); return; }
     var def = { kind: "free", pct: 0, note: "Affiliate: " + escHtml(app.name) + " (" + escHtml(app.platform) + ")", maxUses: null, uses: 0, created: Date.now(), program: "affiliate", platform: app.platform, channelId: app.channelId };
