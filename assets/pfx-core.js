@@ -182,9 +182,15 @@
     var all = storeCoupons();
     if(all[c]) return all[c];
     var up = c.toUpperCase(), keys = Object.keys(BUILTIN_COUPONS).concat(Object.keys(all));
-    for(var i = 0; i < keys.length; i++){ if(keys[i].toUpperCase() === up) return (BUILTIN_COUPONS[keys[i]] || all[keys[i]]); }
+    for(var i = 0; i < keys.length; i++){
+      if(keys[i].toUpperCase() === up){
+        if(isCouponRevoked(keys[i])) return null;
+        return (BUILTIN_COUPONS[keys[i]] || all[keys[i]]);
+      }
+    }
     /* Self-verifying code — works on any device, no registry needed. Cache it
        so the applied-coupon UI and the admin list can see it too. */
+    if(isCouponRevoked(c)) return null;
     var signed = parseSignedCoupon(c);
     if(signed){
       if(isCouponRevoked(c.toUpperCase())) return null;
@@ -293,9 +299,10 @@
     return Promise.race([p, timeout]).then(function(map){
       if(!map || typeof map !== "object") return null;
       var up = String(code || "").trim().toUpperCase(), hit = null;
+      if(isCouponRevoked(up)) return null;
       Object.keys(map).forEach(function(k){
         if(k.charAt(0) === "_") return; // skip "_note" etc.
-        if(k.toUpperCase() === up) hit = k;
+        if(k.toUpperCase() === up && !isCouponRevoked(k)) hit = k;
       });
       var d = hit ? map[hit] : null;
       if(!d || d.kind !== "percent") return null; // percent-only, always
@@ -322,7 +329,7 @@
     /* file:// and offline previews never answer — fail fast to local-only. */
     var timeout = new Promise(function(res){ setTimeout(function(){ if(!done) res(null); }, 3000); });
     return Promise.race([p, timeout]).then(function(d){
-      if(!d) return null;
+      if(!d || isCouponRevoked(d.code) || isCouponRevoked(code)) return null;
       var s = storeCoupons();
       s[d.code] = { kind: d.kind, pct: d.pct, note: "", maxUses: d.maxUses, uses: d.uses || 0, remote: true };
       lsSet("pfx-coupons", s);

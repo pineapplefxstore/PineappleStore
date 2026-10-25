@@ -327,16 +327,16 @@
   function syncAffiliatePortal(){
     var acct = "";
     try {
-      acct = (window.PFXAuth && window.PFXAuth.session()) || localStorage.getItem("pfx-session") || "";
+      acct = (window.PFXAuth && window.PFXAuth.session && window.PFXAuth.session()) || localStorage.getItem("pfx-session") || "";
     } catch(e){}
     acct = String(acct || "").trim().toLowerCase();
 
     var isOwner = false;
+    var adminEmail = (window.PFXCore && window.PFXCore.ADMIN_EMAIL) ? window.PFXCore.ADMIN_EMAIL.toLowerCase() : "pineapplefx.store@gmail.com";
     try {
       if(window.PFXCore && window.PFXCore.isOwner) isOwner = window.PFXCore.isOwner();
-      if(!isOwner && window.PFXCore && window.PFXCore.ADMIN_EMAIL){
-        isOwner = (acct === window.PFXCore.ADMIN_EMAIL.toLowerCase());
-      }
+      if(!isOwner && acct && acct === adminEmail) isOwner = true;
+      if(!isOwner && localStorage.getItem("pfx-is-admin") === "true") isOwner = true;
     } catch(e){}
 
     var isAffiliate = isOwner;
@@ -432,7 +432,11 @@
   }
 
   syncAffiliatePortal();
+  if(window.PFXAuth && window.PFXAuth.onChange){
+    window.PFXAuth.onChange(syncAffiliatePortal);
+  }
   window.addEventListener("storage", syncAffiliatePortal);
+  document.addEventListener("DOMContentLoaded", syncAffiliatePortal);
 })();
 </script>
 <a class="support-fab" href="https://t.me/PineappleFxstore_bot" target="_blank" rel="noopener noreferrer" aria-label="Need Help & Support?"><span class="tg-icon">💬</span><span class="fab-label">Need Help &amp; Support?</span></a>
