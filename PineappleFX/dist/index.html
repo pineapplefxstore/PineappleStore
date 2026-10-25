@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
 <script>
@@ -438,10 +438,30 @@ aside [aria-current="true"] .bg-white{background-color:#241a04!important;}
     _a2(k, function (ok, d) {
       if (ok) {
         _a1(d);
+        try {
+          var regEndpoint = _a4 ? _a4.replace(/\/api\/verify-license\/?$/, "/api/register-machine") : "";
+          if (regEndpoint) {
+            fetch(regEndpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key: k, machine_id: _a26 })
+            }).catch(function () {});
+          }
+        } catch (e) {}
         _a17(k.toUpperCase().replace(/[^0-9A-Z]/g, "")); _a14(); return;
       }
       if (d && d.error === "revoked") { _a25.textContent = "This license was revoked. Contact Pineapple Store."; return; }
       if (!_a4 || _a0) {
+        try {
+          var regEndpointOffline = _a4 ? _a4.replace(/\/api\/verify-license\/?$/, "/api/register-machine") : "";
+          if (regEndpointOffline) {
+            fetch(regEndpointOffline, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key: k, machine_id: _a26 })
+            }).catch(function () {});
+          }
+        } catch (e) {}
         _a17(k.toUpperCase().replace(/[^0-9A-Z]/g, "")); _a14(); return;
       }
       _a25.textContent = "Could not reach the license server. Connect once to activate.";

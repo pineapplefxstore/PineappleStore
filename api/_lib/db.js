@@ -35,6 +35,7 @@ const DEFAULTS = () => ({
   coupons: {}, // CODE -> { kind, pct, note, maxUses, uses, created }
   partners: {}, // id -> { id, name, email, code, created, by } — affiliate program: who you sponsor + which code they share
   slots: {}, // emailLower -> { claimed, orderID, machine, key, amount, at } — one-time $7.90 extra-machine deal
+  orders: {}, // orderID -> { orderID, machine, email, key, amount, kind, at } — PayPal replay guard
   pricing: { regular: "30.00", launch: "20.00", launchEnd: "2026-11-01T00:00:00Z" },
   audit: [], // { at, actor, action, detail } — capped
 });

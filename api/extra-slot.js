@@ -7,8 +7,9 @@
  *
  *   POST /api/extra-slot  { email, machine_id, orderID }
  *     → { ok:true, key, downloadUrl } | { ok:false, error }
- *     errors: missing-fields | bad-email | bad-machine | bad-transaction
- *             already-claimed | server-misconfigured
+ *     errors: missing-fields | bad-email | bad-machine | bad-transaction | underpaid
+ *             verifier-unreachable | order-already-used | already-claimed
+ *             account-disabled | server-misconfigured
  *
  * The slot is keyed by account email (lower-cased): exactly one claim per
  * account, ever. The minted key is a standard device-bound PFX2 key for the
@@ -22,6 +23,7 @@ import {
   normalizeMachineId,
   mintLicense,
 } from "./_lib/license.js";
+import { verifyOrder } from "./_lib/paypal.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MACHINE_RE = /^[A-Za-z0-9]{8}$/;
@@ -83,12 +85,38 @@ export default async function handler(req, res) {
   if (!MACHINE_RE.test(machineId)) {
     return json(res, 400, { ok: false, error: "bad-machine" });
   }
-  if (orderId.length < 5) {
+  if (!orderId) {
     return json(res, 400, { ok: false, error: "bad-transaction" });
   }
   // ---- one-time gate: exactly one claim per account ----
   if (slotFor(email)?.claimed) {
     return json(res, 409, { ok: false, error: "already-claimed" });
+  }
+
+  // ---- payment proof: verify the PayPal order SERVER SIDE ----
+  // $7.90 is the only price this endpoint sells, so the amount is fixed and
+  // the client never gets to name it.
+  const payment = await verifyOrder(orderId, { minAmount: Number(SLOT_AMOUNT), currency: "USD" });
+  if (!payment.ok) {
+    db.audit(email, "extra-slot-payment-rejected", `${machineId} / ${payment.error}`);
+    const err =
+      payment.error === "verifier-unconfigured" ? "server-misconfigured" :
+      payment.error === "verifier-unreachable" ? "verifier-unreachable" :
+      payment.error === "underpaid" ? "underpaid" :
+      "bad-transaction";
+    const status = err === "server-misconfigured" || err === "verifier-unreachable" ? 503 : 402;
+    return json(res, status, { ok: false, error: err });
+  }
+  // Same order on the same machine = retry after a dropped response; return the
+  // key already issued. A different machine or account = replay attempt.
+  const prior = db.get("orders", orderId);
+  if (prior) {
+    if (prior.kind !== "extra-slot" || String(prior.machine).toUpperCase() !== machineId ||
+        String(prior.email || "").toLowerCase() !== email) {
+      db.audit(email, "extra-slot-order-replay", orderId);
+      return json(res, 409, { ok: false, error: "order-already-used" });
+    }
+    return json(res, 200, { ok: true, key: prior.key, downloadUrl: prior.downloadUrl || "", emailed: false, recovered: true });
   }
 
   const secret = process.env.MINT_SECRET;
@@ -98,12 +126,24 @@ export default async function handler(req, res) {
 
   const key = mintLicense(machineId, secret);
   const at = new Date().toISOString();
+  const downloadUrl =
+    process.env.DOWNLOAD_URL || "https://YOUR-USERNAME.github.io/pineapplefx/#install";
   db.set("slots", email, {
     claimed: true,
     orderID: orderId,
     machine: machineId,
     key,
     amount: SLOT_AMOUNT,
+    at,
+  });
+  db.set("orders", orderId, {
+    orderID: orderId,
+    kind: "extra-slot",
+    machine: machineId,
+    email,
+    key,
+    downloadUrl,
+    amount: payment.amount == null ? SLOT_AMOUNT : String(payment.amount),
     at,
   });
   db.set("licenses", normalizeKey(key), {
@@ -119,7 +159,5 @@ export default async function handler(req, res) {
   });
   db.audit(email, "extra-slot-claimed", `${machineId} / ${orderId}`);
 
-  const downloadUrl =
-    process.env.DOWNLOAD_URL || "https://YOUR-USERNAME.github.io/pineapplefx/#install";
   return json(res, 200, { ok: true, key, downloadUrl, emailed: false });
 }

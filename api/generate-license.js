@@ -33,7 +33,9 @@
  */
 import crypto from "node:crypto";
 import { db } from "./_lib/db.js";
-import { isAccountDisabled, cors, json, readBody, rateLimit, clientIp } from "./_lib/auth.js";
+import { isAccountDisabled, cors, json, readBody, rateLimit, clientIp, bearerToken, verifyJWT } from "./_lib/auth.js";
+import { verifyOrder } from "./_lib/paypal.js";
+import { parseSignedPercent, priceForCoupon } from "./_lib/coupons.js";
 import {
   ALPHA,
   fnv1a,
@@ -122,6 +124,10 @@ function couponKind(raw) {
   for (const k of Object.keys(all)) {
     if (k.toUpperCase() === up) return normCouponValue(all[k]);
   }
+  /* Percent-only signed code (works without a server lookup). Free codes are
+     never accepted this way — those must exist in the coupon table. */
+  const signedPct = parseSignedPercent(c);
+  if (signedPct) return `percent:${signedPct}`;
   return "invalid";
 }
 
@@ -251,7 +257,22 @@ export default async function handler(req, res) {
   // free-coupon claims — the key is displayed instantly on screen anyway.
   // Owner buys nothing: admin accounts mint free keys on any machine.
   const requester = email ? db.get("users", email.toLowerCase()) : null;
-  const isOwnerFree = !!(requester && requester.is_admin);
+  /* SECURITY: the email in the request body is NOT proof of identity. Owner
+     free minting additionally requires a valid admin session token, otherwise
+     anyone could type the owner's email and mint a free key. */
+  let authedEmail = "";
+  try {
+    const payload = verifyJWT(bearerToken(req));
+    if (payload && payload.email) authedEmail = String(payload.email).toLowerCase();
+  } catch {
+    /* no/invalid token → not authenticated */
+  }
+  const isOwnerFree = !!(
+    requester &&
+    requester.is_admin &&
+    authedEmail &&
+    authedEmail === String(email || "").toLowerCase()
+  );
   const emailOptional = kind === "free" || isOwnerFree;
   if (!machineId || (!txnId && !couponRaw && !isOwnerFree) || (!email && !emailOptional)) {
     return json(res, 400, { ok: false, error: "missing-fields" });
@@ -290,6 +311,38 @@ export default async function handler(req, res) {
     }
   }
 
+  // ---- payment proof: verify the PayPal order SERVER SIDE ----
+  // The browser captures the order, but its orderID is only a claim — it must
+  // be checked against PayPal, otherwise a made-up ID mints a free key.
+  let payment = null;
+  const orderKey = orderId || txnId;
+  if (!isFreeClaim) {
+    payment = await verifyOrder(orderKey, {
+      minAmount: priceForCoupon(kind, db.all("pricing")),
+      currency: "USD",
+    });
+    if (!payment.ok) {
+      db.audit(email || "?", "payment-rejected", `${machineId} / ${payment.error}`);
+      const err =
+        payment.error === "verifier-unconfigured" ? "server-misconfigured" :
+        payment.error === "verifier-unreachable" ? "verifier-unreachable" :
+        payment.error === "underpaid" ? "underpaid" :
+        "bad-transaction";
+      const status = err === "server-misconfigured" || err === "verifier-unreachable" ? 503 : 402;
+      return json(res, status, { ok: false, error: err });
+    }
+    // One PayPal order = one machine. Re-submitting for the same machine is an
+    // idempotent retry and returns the key that was already issued.
+    const used = db.get("orders", orderKey);
+    if (used) {
+      if (String(used.machine || "").toUpperCase() !== machineId) {
+        db.audit(email || "?", "order-replay", orderKey);
+        return json(res, 409, { ok: false, error: "order-already-used" });
+      }
+      return json(res, 200, { ok: true, key: used.key, emailed: false, recovered: true });
+    }
+  }
+
   const secret = process.env.MINT_SECRET;
   if (!secret) {
     // Fail loudly but gracefully — frontend turns this into a readable message.
@@ -309,8 +362,19 @@ export default async function handler(req, res) {
     source: couponRaw ? "coupon" : isOwnerFree ? "admin-free" : "purchase",
     coupon: couponRaw || "",
     orderID: orderId || "",
-    amount: amount || "",
+    amount: payment && payment.amount != null ? String(payment.amount) : (amount || ""),
   });
+  if (!isFreeClaim && payment) {
+    db.set("orders", orderKey, {
+      orderID: orderKey,
+      machine: machineId,
+      email: email || "",
+      key,
+      amount: payment.amount == null ? "" : String(payment.amount),
+      kind: "license",
+      at: new Date().toISOString(),
+    });
+  }
   if (couponRaw) couponUseDb(couponRaw);
   db.audit(email || "?", "license-issued", `${machineId}${couponRaw ? " / " + couponRaw : ""}${isOwnerFree ? " / admin-free" : ""}`);
 
