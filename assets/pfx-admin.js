@@ -710,22 +710,25 @@
           betas[em] = { email: em, name: em, at: Date.now() };
           lsSet("pfx-beta-access", betas);
 
-          // 2. Generate a 20% discount coupon code if they don't have one
+          // 2. Generate custom username coupon code if they don't have one
           var code = existingApp ? existingApp.couponCode : "";
           if(!code){
-            var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
-            for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
-            var uname = em.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "PARTNER";
-            code = "AFX-" + uname + "-" + s.slice(4);
+            var defaultUname = em.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15) || "CREATOR";
+            var customName = prompt("Enter custom username code for " + em + " (e.g. " + defaultUname + "):", defaultUname);
+            if(customName === null) return;
+            var cleanUname = customName.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || defaultUname;
+            var baseCode = cleanUname + "20";
             if(window.PFXCoupons && window.PFXCoupons.shareable){
-              var signedAff = window.PFXCoupons.shareable(code, 20, "percent");
-              if(signedAff) code = signedAff;
+              var signedAff = window.PFXCoupons.shareable(baseCode, 20, "percent");
+              code = signedAff || baseCode;
+            } else {
+              code = baseCode;
             }
             if(window.PFXCoupons){
               window.PFXCoupons.create(code, {
                 kind: "percent",
                 pct: 20,
-                note: "Affiliate 20% off: " + em,
+                note: "Affiliate 20% off: " + cleanUname + " (" + em + ")",
                 maxUses: null,
                 uses: 0,
                 created: Date.now(),
@@ -1312,15 +1315,14 @@
     var app = all[id];
     if(!app) return;
     if(app.status !== "pending"){ showToast("Already processed."); return; }
-    // Generate a 20% discount coupon code for this affiliate: AFX-{username}-{random}
-    var A = "ABCDEFGHJKMNPQRSTVWXYZ23456789", s = "";
-    for(var i = 0; i < 8; i++) s += A.charAt(Math.floor(Math.random() * A.length));
-    var uname = String(app.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) || "PARTNER";
-    var code = "AFX-" + uname + "-" + s.slice(4);
+    // Generate a custom 20% discount coupon code based on their name/channel
+    var uname = String(app.name || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15) || "CREATOR";
+    var baseCode = uname + "20";
+    var code = baseCode;
     // Sign it with 20% discount so buyers from anywhere can use it securely
     var pctDiscount = 20;
     if(window.PFXCoupons && window.PFXCoupons.shareable){
-      var signedAff = window.PFXCoupons.shareable(code, pctDiscount, "percent");
+      var signedAff = window.PFXCoupons.shareable(baseCode, pctDiscount, "percent");
       if(signedAff) code = signedAff;
     }
     var coupons = window.PFXCoupons ? window.PFXCoupons.all() : {};
