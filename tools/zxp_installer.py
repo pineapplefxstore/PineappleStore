@@ -1,8 +1,8 @@
-"""Pineapple ZXP Installer - Universal GUI and CLI ZXP Extension Installer for Adobe After Effects.
+"""Pineapple ZXP Installer - Premium Apple-Inspired Adobe Extension Installer.
 Works with any .zxp file:
-  - Automatically enables PlayerDebugMode in Windows Registry for CSXS.9 -> CSXS.20
+  - Enables PlayerDebugMode in Windows Registry for CSXS.9 -> CSXS.20
   - Unpacks .zxp into %APPDATA%\\Adobe\\CEP\\extensions\\<ExtensionName>
-  - Simple file-picker GUI.
+  - macOS Sonoma / Sequoia inspired minimalist aesthetic with embedded logo.
 """
 import os
 import sys
@@ -11,6 +11,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
 
 def enable_player_debug_mode():
     try:
@@ -58,58 +59,119 @@ def install_zxp(zxp_path):
         os.makedirs(target_dir, exist_ok=True)
         with zipfile.ZipFile(zxp_path, 'r') as z:
             z.extractall(target_dir)
-        return True, 'Successfully installed to:\n' + target_dir + '\n\nRestart After Effects and open Window -> Extensions.'
+        return True, 'Installed successfully!\n\nLocation: ' + target_dir + '\n\nRestart After Effects and find it in Window > Extensions.'
     except Exception as e:
         return False, 'Installation failed: ' + str(e)
+
+def resolve_resource(name):
+    # Support PyInstaller _MEIPASS and local folder
+    if hasattr(sys, '_MEIPASS'):
+        p = os.path.join(sys._MEIPASS, name)
+        if os.path.exists(p):
+            return p
+    # Local fallback
+    local = os.path.join(os.path.dirname(__file__), '..', name)
+    if os.path.exists(local):
+        return local
+    return name
 
 def run_gui():
     root = tk.Tk()
     root.title('Pineapple ZXP Installer')
-    root.geometry('460x280')
+    root.geometry('500x380')
     root.resizable(False, False)
-    root.configure(bg='#141416')
+    
+    # Apple dark mode palette
+    BG = '#1e1e20'
+    CARD = '#2a2a2e'
+    BORDER = '#38383c'
+    ACCENT = '#feca08'
+    TEXT = '#f5f5f7'
+    MUTED = '#86868b'
+    
+    root.configure(bg=BG)
 
-    title_label = tk.Label(root, text='Pineapple ZXP Installer', font=('Segoe UI', 15, 'bold'), fg='#feca08', bg='#141416')
-    title_label.pack(pady=(20, 5))
+    # Set icon
+    ico_path = resolve_resource(os.path.join('assets', 'logo.ico'))
+    if os.path.exists(ico_path):
+        try:
+            root.iconbitmap(ico_path)
+        except Exception:
+            pass
 
-    desc_label = tk.Label(root, text='Fast, one-click installer for Adobe CEP / After Effects extensions', font=('Segoe UI', 9), fg='#a8a8ad', bg='#141416')
-    desc_label.pack(pady=(0, 20))
+    # Top Header Container
+    header_frame = tk.Frame(root, bg=BG)
+    header_frame.pack(pady=(28, 14), fill='x')
+
+    # Logo image
+    png_path = resolve_resource(os.path.join('assets', 'logo.png'))
+    img_tk = None
+    if os.path.exists(png_path):
+        try:
+            pil_img = Image.open(png_path)
+            pil_img = pil_img.resize((56, 56), Image.Resampling.LANCZOS)
+            img_tk = ImageTk.PhotoImage(pil_img)
+            logo_label = tk.Label(header_frame, image=img_tk, bg=BG)
+            logo_label.image = img_tk
+            logo_label.pack()
+        except Exception:
+            pass
+
+    title_label = tk.Label(header_frame, text='Pineapple ZXP Installer', font=('SF Pro Display', 16, 'bold'), fg=TEXT, bg=BG)
+    title_label.pack(pady=(8, 2))
+
+    sub_label = tk.Label(header_frame, text='Designed for Adobe After Effects Extensions', font=('SF Pro Text', 10), fg=MUTED, bg=BG)
+    sub_label.pack()
+
+    # Rounded Apple Style Card
+    card_frame = tk.Frame(root, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=20, pady=18)
+    card_frame.pack(padx=32, fill='x')
 
     selected_file = tk.StringVar(value='')
 
-    status_label = tk.Label(root, text='Select a .zxp file to install', font=('Segoe UI', 9), fg='#c9c9ce', bg='#141416', wraplength=420)
-    status_label.pack(pady=(0, 15))
+    file_display = tk.Label(card_frame, text='Drag or choose a .zxp extension file to begin', font=('SF Pro Text', 10), fg='#d1d1d6', bg=CARD, wraplength=400)
+    file_display.pack(pady=(0, 14))
 
     def pick_file():
-        fn = filedialog.askopenfilename(title='Select .zxp Extension', filetypes=[('ZXP Extension', '*.zxp'), ('All Files', '*.*')])
+        fn = filedialog.askopenfilename(title='Select .zxp Extension', filetypes=[('After Effects ZXP Package', '*.zxp'), ('All Files', '*.*')])
         if fn:
             selected_file.set(fn)
-            status_label.config(text=os.path.basename(fn), fg='#feca08')
+            base_fn = os.path.basename(fn)
+            file_display.config(text=base_fn, fg=ACCENT, font=('SF Pro Text', 10, 'bold'))
+            btn_install.config(state='normal', bg=ACCENT, fg='#141416')
 
     def do_install():
         fn = selected_file.get()
         if not fn:
-            messagebox.showwarning('Select File', 'Please choose a .zxp file first.')
+            messagebox.showwarning('Select File', 'Please select a .zxp extension file first.')
             return
         btn_install.config(state='disabled', text='Installing...')
         root.update()
         ok, msg = install_zxp(fn)
         btn_install.config(state='normal', text='Install Extension')
         if ok:
-            messagebox.showinfo('Success', msg)
-            status_label.config(text='Installed successfully! Restart After Effects.', fg='#22c55e')
+            messagebox.showinfo('Installation Complete', msg)
+            file_display.config(text='Installed successfully! Restart After Effects.', fg='#34c759')
         else:
-            messagebox.showerror('Error', msg)
-            status_label.config(text='Installation failed.', fg='#ff4d4f')
+            messagebox.showerror('Installation Failed', msg)
+            file_display.config(text='Installation encountered an error.', fg='#ff453a')
 
-    btn_frame = tk.Frame(root, bg='#141416')
-    btn_frame.pack(pady=10)
+    btn_row = tk.Frame(card_frame, bg=CARD)
+    btn_row.pack(fill='x')
 
-    btn_browse = tk.Button(btn_frame, text='Browse .zxp...', font=('Segoe UI', 10, 'bold'), bg='#26262b', fg='#ffffff', relief='flat', padx=15, pady=8, cursor='hand2', command=pick_file)
-    btn_browse.grid(row=0, column=0, padx=8)
+    btn_choose = tk.Button(btn_row, text='Choose Package...', font=('SF Pro Text', 10, 'bold'),
+                           bg='#3a3a3e', fg=TEXT, activebackground='#48484d', activeforeground=TEXT,
+                           relief='flat', bd=0, padx=16, pady=8, cursor='hand2', command=pick_file)
+    btn_choose.pack(side='left', expand=True, padx=(0, 6))
 
-    btn_install = tk.Button(btn_frame, text='Install Extension', font=('Segoe UI', 10, 'bold'), bg='#feca08', fg='#241a04', relief='flat', padx=18, pady=8, cursor='hand2', command=do_install)
-    btn_install.grid(row=0, column=1, padx=8)
+    btn_install = tk.Button(btn_row, text='Install Extension', font=('SF Pro Text', 10, 'bold'),
+                            bg='#3a3a3e', fg=MUTED, activebackground='#feca08', activeforeground='#141416',
+                            relief='flat', bd=0, padx=18, pady=8, cursor='hand2', state='disabled', command=do_install)
+    btn_install.pack(side='right', expand=True, padx=(6, 0))
+
+    # Bottom Footer
+    footer = tk.Label(root, text='Automatically configures Adobe CEP PlayerDebugMode', font=('SF Pro Text', 8), fg='#636366', bg=BG)
+    footer.pack(side='bottom', pady=16)
 
     root.mainloop()
 
