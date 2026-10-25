@@ -8,7 +8,7 @@
   function paint(){
     var t = current();
     root.setAttribute("data-theme", t);
-    document.getElementById("themeBtn").textContent = (t === "dark") ? "☀" : "☾";
+    document.getElementById("themeBtn").textContent = (t === "dark") ? "☾" : "☀";
   }
   document.getElementById("themeBtn").onclick = function(){
     var next = (root.getAttribute("data-theme") === "dark") ? "light" : "dark";
