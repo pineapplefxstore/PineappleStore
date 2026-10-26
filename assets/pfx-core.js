@@ -667,7 +667,7 @@
       var sale = "$" + priceNum(amt) + " <small>USD — " + (+def.pct) + "% off</small>";
       if(hp) hp.innerHTML = sale;
       if(pp) pp.innerHTML = sale;
-      msg.style.color = "var(--label-2)"; msg.innerHTML = (+def.pct) + "% off applied" + (def.maxUses != null ? " (" + (def.uses || 0) + "/" + def.maxUses + " used)" : "") + ". <a href=\"#\" id=\"couponClear\" style=\"color:var(--accent);font-weight:700;\">remove</a>"; bindClear();
+      msg.style.color = "var(--label-2)"; msg.innerHTML = (+def.pct) + "% off applied (" + esc(c) + ")! <button type=\"button\" class=\"mini-btn\" id=\"copyCouponCode\" style=\"margin-left:6px;font-size:11px;padding:3px 10px;\">Copy Code</button> <a href=\"#\" id=\"couponClear\" style=\"color:var(--accent);font-weight:700;margin-left:8px;\">remove</a>"; setTimeout(function(){ var cb = document.getElementById("copyCouponCode"); if(cb){ cb.onclick = function(){ try { navigator.clipboard.writeText(c); cb.textContent = "Copied ✓"; setTimeout(function(){ cb.textContent = "Copy Code"; }, 2000); }catch(e){} }; } }, 50); bindClear();
       renderPP(amt);
     } else {
       if(c && !def){ try { localStorage.removeItem("pineapplefx-coupon"); } catch(e){} c = ""; }
