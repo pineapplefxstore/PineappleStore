@@ -606,64 +606,13 @@
     });
   }
   function renderPP(amount){
-    if(!document.getElementById("ppHero") && !document.getElementById("ppPrice")) return; // store page only
-    ppBox("");
-    if(!window.PFXAuth.require()){
-      ppBox(loginCTAHTML("Log in / Sign up to buy — $" + priceNum(amount)));
-      wireLoginCTAs();
-      return;
-    }
-    if(typeof paypal === "undefined" || !paypal.Buttons){
-      ppBox('<a class="btn btn-pay" href="' + meLink(amount) + '">Buy with PayPal \u2014 $' + priceNum(amount) + ' USD</a>');
-      return;
-    }
+    // PayPal removed — Payhip is the primary checkout
     var cleanAmount = priceNum(amount);
-    ["ppHero", "ppPrice"].filter(function(id){ return !!document.getElementById(id); }).forEach(function(id){
-      try {
-        paypal.Buttons({
-          style:{ layout:"vertical", color:"gold", shape:"pill", label:"paypal" },
-          createOrder:function(dt, actions){
-            return actions.order.create({
-              intent: "CAPTURE",
-              purchase_units:[{
-                description:"PineappleFX license - one machine",
-                amount:{ value:cleanAmount, currency_code:"USD" }
-              }]
-            });
-          },
-          onApprove:function(dt, actions){
-            return actions.order.capture().then(function(det){
-              var orderID = dt.orderID || (det && det.id) || "";
-              var payerEmail = (det && det.payer && det.payer.email_address) || (window.PFXAuth && window.PFXAuth.session && window.PFXAuth.session()) || "";
-              if(window.PineappleFXLic && window.PineappleFXLic.handleApproval){
-                window.PineappleFXLic.handleApproval({ orderID:orderID, email:payerEmail, amount:cleanAmount });
-              } else {
-                // Fallback if the license script hasn't loaded: keep the legacy receipt page.
-                var q = "order=" + encodeURIComponent(orderID)
-                  + "&txn=" + encodeURIComponent((det && det.id) || orderID)
-                  + "&amount=" + encodeURIComponent(cleanAmount)
-                  + "&email=" + encodeURIComponent(payerEmail);
-                location.href = "success?" + q;
-              }
-            }).catch(function(err){
-              ppToast("Payment capture error — please retry or contact support.");
-            });
-          },
-          onCancel:function(){ ppToast("Payment cancelled — no charge made."); },
-          onError:function(err){
-            console.error("PayPal Error:", err);
-            ppToast("PayPal had a hiccup — try again or use direct link.");
-          }
-        }).render("#" + id).catch(function(renderErr){
-          // If SDK failed to render into container, show fallback PayPal link
-          var el = document.getElementById(id);
-          if(el) el.innerHTML = '<a class="btn btn-pay" href="' + meLink(cleanAmount) + '">Buy with PayPal \u2014 $' + cleanAmount + ' USD</a>';
-        });
-      } catch(e){
-        var el = document.getElementById(id);
-        if(el) el.innerHTML = '<a class="btn btn-pay" href="' + meLink(cleanAmount) + '">Buy with PayPal \u2014 $' + cleanAmount + ' USD</a>';
-      }
-    });
+    var c = couponGet();
+    var payhipBtn = document.querySelector('a[data-product="dSNDu"]');
+    if(payhipBtn){
+      payhipBtn.textContent = "Get PineappleFX — $" + cleanAmount;
+    }
   }
   function claimOnly(){
     if(!window.PFXAuth.require()){ ppBox(loginCTAHTML("Log in to claim free license")); wireLoginCTAs(); return; }
