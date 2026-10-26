@@ -682,8 +682,24 @@
     if(nav) nav.textContent = "Buy — $" + priceNum(full) + " USD";
     if(foot) foot.textContent = launchActive() ? "$20 launch special (reg. $30)" : "$30 one-time";
   }
+  
+  function updatePayhipLinks(code) {
+    try {
+      var links = document.querySelectorAll('a[href*="payhip.com/b/dSNDu"]');
+      links.forEach(function(a) {
+        var base = "https://payhip.com/b/dSNDu";
+        if (code) {
+          a.setAttribute("href", base + "?coupon=" + encodeURIComponent(code));
+        } else {
+          a.setAttribute("href", base);
+        }
+      });
+    } catch(e){}
+  }
+
   function paintCoupon(){
     var c = couponGet(), msg = document.getElementById("couponMsg");
+    updatePayhipLinks(c);
     var full = basePrice();
     var fld = document.getElementById("couponField");
     var def = couponDef(c);
