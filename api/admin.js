@@ -20,6 +20,7 @@ import crypto from "node:crypto";
 import { db } from "./_lib/db.js";
 import { cors, json, readBody, requireAdmin, isAccountDisabled } from "./_lib/auth.js";
 import { mintLicense, normalizeKey, normalizeMachineId, verifySignature } from "./_lib/license.js";
+import { syncCouponToPayhip } from "./_lib/payhip.js";
 
 const CODE_RE = /^[A-Z0-9-]{4,40}$/;
 
@@ -227,7 +228,9 @@ export default async function handler(req, res) {
       by: me,
     });
     db.audit(me, "coupon-create", code);
-    return json(res, 200, { ok: true, code });
+    // Automatic sync to Payhip
+    const payhipSync = await syncCouponToPayhip(code, { pct, kind, maxUses, note: body.note });
+    return json(res, 200, { ok: true, code, payhipSynced: payhipSync.ok });
   }
 
   if (action === "coupon-delete") {
