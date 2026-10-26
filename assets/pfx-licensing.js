@@ -1,5 +1,47 @@
 /* ---- PineappleFX instant licensing: pay → key on this page, no manual form ---- */
 window.PineappleFXLic = (function(){
+
+  /* --- Payhip checkout detection & automatic redirect to license --- */
+  function checkPayhipReturn() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var payhipOrder = params.get("payhip_order") || params.get("order") || params.get("transaction_id") || params.get("ph_order");
+      var buyerEmail = params.get("email") || params.get("buyer_email") || "";
+      if (payhipOrder) {
+        handleApproval({
+          orderID: "payhip_" + payhipOrder,
+          email: buyerEmail
+        });
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    } catch(e){}
+  }
+
+  // Listen for Payhip in-page popup checkout completion
+  window.addEventListener("message", function(e) {
+    try {
+      if (e.origin && e.origin.indexOf("payhip.com") !== -1) {
+        var d = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (d && (d.event === "purchase_successful" || d.event === "complete" || d.status === "completed" || d.type === "payment_successful")) {
+          var orderId = d.order_id || d.transaction_id || d.id || ("ph_" + Date.now());
+          var email = d.email || d.buyer_email || "";
+          handleApproval({
+            orderID: "payhip_" + orderId,
+            email: email
+          });
+        }
+      }
+    } catch(err){}
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", checkPayhipReturn);
+  } else {
+    checkPayhipReturn();
+  }
+
   var ENDPOINT = "/api/generate-license";
   var ZXP_URL = "./downloads/PineappleFX.zxp"; // staged release build (site/downloads/)
   function apiUrl(p){ try { if(window.PFXApi) return window.PFXApi(p); } catch(e){} return p; }

@@ -35,6 +35,7 @@ import crypto from "node:crypto";
 import { db } from "./_lib/db.js";
 import { isAccountDisabled, cors, json, readBody, rateLimit, clientIp, bearerToken, verifyJWT } from "./_lib/auth.js";
 import { verifyOrder } from "./_lib/paypal.js";
+import { verifyPayhipOrder } from "./_lib/payhip.js";
 import { parseSignedPercent, priceForCoupon } from "./_lib/coupons.js";
 import {
   ALPHA,
@@ -317,10 +318,22 @@ export default async function handler(req, res) {
   let payment = null;
   const orderKey = orderId || txnId;
   if (!isFreeClaim) {
-    payment = await verifyOrder(orderKey, {
-      minAmount: priceForCoupon(kind, db.all("pricing")),
-      currency: "USD",
-    });
+    if (orderKey.startsWith("payhip_") || orderKey.startsWith("PH_") || orderKey.toLowerCase().includes("payhip")) {
+      payment = await verifyPayhipOrder(orderKey, {
+        minAmount: priceForCoupon(kind, db.all("pricing")),
+      });
+    } else {
+      payment = await verifyOrder(orderKey, {
+        minAmount: priceForCoupon(kind, db.all("pricing")),
+        currency: "USD",
+      });
+      if (!payment.ok && (orderKey.length >= 6 || process.env.PFX_ALLOW_UNVERIFIED === "1")) {
+        const ph = await verifyPayhipOrder(orderKey, {
+          minAmount: priceForCoupon(kind, db.all("pricing")),
+        });
+        if (ph.ok) payment = ph;
+      }
+    }
     if (!payment.ok) {
       db.audit(email || "?", "payment-rejected", `${machineId} / ${payment.error}`);
       const err =

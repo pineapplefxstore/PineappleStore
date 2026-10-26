@@ -155,6 +155,17 @@ footer a:hover{text-decoration:underline}
 
   var q = {};
   try {
+    var sp = new URLSearchParams(location.search || "");
+    sp.forEach(function(v, k){ q[k] = v; });
+    // Support Payhip order & transaction query params
+    if (!q.order) {
+      q.order = sp.get("payhip_order") || sp.get("transaction_id") || sp.get("ph_order") || sp.get("id");
+    }
+    if (!q.email) {
+      q.email = sp.get("buyer_email") || sp.get("email");
+    }
+  } catch(e){}
+  try {
     new URLSearchParams(location.search || "").forEach(function(v, k){ q[k] = v; });
   } catch(e){}
   if(!q.order){
